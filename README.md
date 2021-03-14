@@ -9,18 +9,10 @@ MLB, Data found from the following Kaggle URLs
 ### Pitch Data
 
 ```bash
-https://www.kaggle.com/gghatano/mlbplaybyplay2010s
-```
-
-All event data on MLB 2010-2018. The meanings of the data: http://chadwick.sourceforge.net/doc/cwevent.html
-
-### Play-by-Play Data
-
-```bash
 https://www.kaggle.com/pschale/mlb-pitch-data-20152018
 ```
 
-Pitch-level data for every pitch thrown during the 2015-2018 MLB regular seasons. Data scraped from http://gd2.mlb.com/components/game/mlb/. Each row represents a single pitch.
+Pitch-level data for every pitch thrown during the 2015-2018 MLB regular seasons. Each row represents a single pitch.
 
 #### Pitch Type Definitions
 CH - Changeup
