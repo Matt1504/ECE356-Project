@@ -12,7 +12,7 @@ MLB, Data found from the following Kaggle URLs
 https://www.kaggle.com/pschale/mlb-pitch-data-20152018
 ```
 
-Pitch-level data for every pitch thrown during the 2015-2018 MLB regular seasons. Data scraped from http://gd2.mlb.com/components/game/mlb/. Each row represents a single pitch.
+Pitch-level data for every pitch thrown during the 2015-2018 MLB regular seasons. Each row represents a single pitch.
 
 #### Pitch Type Definitions
 CH - Changeup
