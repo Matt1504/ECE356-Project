@@ -9,14 +9,6 @@ MLB, Data found from the following Kaggle URLs
 ### Pitch Data
 
 ```bash
-https://www.kaggle.com/gghatano/mlbplaybyplay2010s
-```
-
-All event data on MLB 2010-2018. The meanings of the data: http://chadwick.sourceforge.net/doc/cwevent.html
-
-### Play-by-Play Data
-
-```bash
 https://www.kaggle.com/pschale/mlb-pitch-data-20152018
 ```
 
