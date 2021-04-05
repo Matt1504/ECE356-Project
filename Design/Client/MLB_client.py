@@ -787,13 +787,25 @@ class MLB:
 
 	def delete_page(self):
 		print('Do you want to delete:')
-		print('\t1. Pithces Data')
-		print('\t2. Ejections Data')
+		print('\t1. Teams Data')
+		print('\t2. Players Data')
+		print('\t3. At Bats Data')
+		print('\t4. Pitches Data')
+		print('\t5. Ejections Data')
+		print('\t6. Games Data')
 		self.nav = input('Enter where you want to go: ')
 		if self.nav == '1':
-			self.delete_pitch_page()
+			self.delete_team_page()
 		elif self.nav == '2':
+			self.delete_player_page()
+		elif self.nav == '3':
+			self.delete_atbat_page()
+		elif self.nav == '4':
+			self.delete_pitch_page()
+		elif self.nav == '5':
 			self.delete_ejection_page()
+		elif self.nav == '6':
+			self.delete_game_page()
 		elif self.nav == 'home':
 			self.home_page()
 		elif self.nav == 'back':
@@ -803,6 +815,93 @@ class MLB:
 		else:
 			print('Invalid Input')
 			self.delete_page()
+
+	def delete_team_page(self):
+		print('\nDelete Pitch')
+		print('Input format: \"<Abbreviation>\". Must be a valid abbreviation')
+		print('Example: TOR')
+		self.nav = input('Enter the team\'s info: ')
+		if self.nav == 'back':
+			self.delete_page()
+		elif self.nav == 'home':
+			self.home_page()
+		elif self.nav == 'exit':
+			self.cleanup()
+		else:
+			# we have some input
+			query = "delete from TeamNames where abbreviation=\"" + self.nav + "\";"
+			print('Are you sure you want to delete this data?')
+			print('\t1. Yes')
+			print('\t2. No')
+			self.nav = input("Your decision: ")
+			if self.nav != '1':
+				self.delete_team_page()
+			try:
+				self.cursor.execute(query)
+				self.cnx.commit()
+				print("Success!")
+			except Error as e:
+				print(f"The error '{e}' occurred")
+				print('Invalid Input')
+			self.delete_team_page()
+
+	def delete_player_page(self):
+		print('\nDelete Player')
+		print('Input format: \"<Player ID>\". Must be a valid ID')
+		print('Example: 000001')
+		self.nav = input('Enter the player\'s info: ')
+		if self.nav == 'back':
+			self.delete_page()
+		elif self.nav == 'home':
+			self.home_page()
+		elif self.nav == 'exit':
+			self.cleanup()
+		else:
+			# we have some input
+			query = "delete from PlayerNames where id=" + self.nav + ";"
+			print('Are you sure you want to delete this data?')
+			print('\t1. Yes')
+			print('\t2. No')
+			self.nav = input("Your decision: ")
+			if self.nav != '1':
+				self.delete_player_page()
+			try:
+				self.cursor.execute(query)
+				self.cnx.commit()
+				print("Success!")
+			except Error as e:
+				print(f"The error '{e}' occurred")
+				print('Invalid Input')
+			self.delete_player_page()
+
+	def delete_atbat_page(self):
+		print('\nDelete At Bat')
+		print('Input format: \"<At Bat ID>\". Must be a valid ID')
+		print('Example: 2015000001')
+		self.nav = input('Enter the at bat\'s info: ')
+		if self.nav == 'back':
+			self.delete_page()
+		elif self.nav == 'home':
+			self.home_page()
+		elif self.nav == 'exit':
+			self.cleanup()
+		else:
+			# we have some input
+			query = "delete from AtBats where abID=" + self.nav + ";"
+			print('Are you sure you want to delete this data?')
+			print('\t1. Yes')
+			print('\t2. No')
+			self.nav = input("Your decision: ")
+			if self.nav != '1':
+				self.delete_atbat_page()
+			try:
+				self.cursor.execute(query)
+				self.cnx.commit()
+				print("Success!")
+			except Error as e:
+				print(f"The error '{e}' occurred")
+				print('Invalid Input')
+			self.delete_atbat_page()
 
 	def delete_pitch_page(self):
 		print('\nDelete Pitch')
@@ -869,6 +968,35 @@ class MLB:
 				print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.delete_ejection_page()
+
+	def delete_game_page(self):
+		print('\nDelete Game')
+		print('Input format: \"<Game ID>\". Must be a valid ID')
+		print('Example: 201500001')
+		self.nav = input('Enter the game\'s info: ')
+		if self.nav == 'back':
+			self.delete_page()
+		elif self.nav == 'home':
+			self.home_page()
+		elif self.nav == 'exit':
+			self.cleanup()
+		else:
+			# we have some input
+			query = "delete from Games where gID=" + self.nav + ";"
+			print('Are you sure you want to delete this data?')
+			print('\t1. Yes')
+			print('\t2. No')
+			self.nav = input("Your decision: ")
+			if self.nav != '1':
+				self.delete_game_page()
+			try:
+				self.cursor.execute(query)
+				self.cnx.commit()
+				print("Success!")
+			except Error as e:
+				print(f"The error '{e}' occurred")
+				print('Invalid Input')
+			self.delete_game_page()
 
 	def game_page(self):
 		print('\nGame Data')
