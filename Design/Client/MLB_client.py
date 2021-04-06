@@ -2,7 +2,7 @@ import mysql.connector
 from mysql.connector import Error
 from prettytable import PrettyTable
 import datetime
-from collections import deque
+import math
 
 pitch_legend = {
 	'CH': 'Changeup',
@@ -28,18 +28,32 @@ on_base_legend = ['Single', 'Double', 'Triple', 'Home Run', 'Walk', 'Hit By Pitc
 not_at_bat = ['Walk', 'Intent Walk', 'Hit By Pitch', 'Sac Bunt', 'Sac Fly', 'Sac Fly DP']
 
 class Batter:
-	def __init__(self, at_bats = 0, hits = 0, walks = 0, rbi = 0):
+	def __init__(self, at_bats = 0, hits = 0, walks = 0, rbi = 0, strikeouts = 0, singles = 0, doubles = 0, triples = 0, home_runs = 0, sacs = 0):
 		self.at_bats = at_bats
 		self.hits = hits
 		self.walks = walks
 		self.rbi = rbi
+		self.strikeouts = strikeouts
+		self.singles = singles
+		self.doubles = doubles
+		self.triples = triples
+		self.home_runs = home_runs
+		self.sacs = sacs
 
 class Pitcher:
-	def __init__(self, innings = 0.0, hits = 0, walks = 0, strikeouts = 0):
+	def __init__(self, innings = 0.0, hits = 0, runs = 0, walks = 0, strikeouts = 0, home_runs = 0):
 		self.innings = innings
 		self.hits = hits
+		self.runs = runs
 		self.walks = walks
 		self.strikeouts = strikeouts
+		self.home_runs = home_runs
+
+class Ejected:
+	def __init__(self, player, inning, des):
+		self.player = player
+		self.inning = inning,
+		self.des = des
 
 class MLB:
 	def __init__(self):
@@ -72,7 +86,7 @@ class MLB:
 		if pitchers:
 			query = "select concat(lastName, ', ', firstName) from PlayerNames where id in (select distinct pitcherID from AtBats);"
 		else:
-			query = "select concat(lastName, ', ', firstName) from PlayerNames where id in (select distinct batterID from AtBats)"
+			query = "select concat(lastName, ', ', firstName) from PlayerNames where id in (select distinct batterID from AtBats);"
 		# run the query
 		# print the results
 		self.cursor.execute(query)
@@ -84,8 +98,8 @@ class MLB:
 		print('\nWelcome to the MLB Stats Database for the 2015-2018 Regular Seasons')
 		print('Input \"back\" to go to previous page, or \"home\" to go back to this page at any point, or \"exit\" to close the application')
 		print('Do you want to: ')
-		print('\t1. View')
-		print('\t2. Modify')
+		print('\t1. View Stats')
+		print('\t2. Modify Stats')
 		self.nav = input('Enter where you want to go: ')
 		if self.nav == '1':
 			self.view_page()
@@ -102,7 +116,7 @@ class MLB:
 			self.home_page()
 
 	def view_page(self):
-		print('Do you want to view:')
+		print('\nDo you want to view:')
 		print('\t1. Game Data')
 		print('\t2. Player Data')
 		self.nav = input('Enter where you want to go: ')
@@ -121,7 +135,7 @@ class MLB:
 			self.view_page()
 
 	def modify_page(self):
-		print('Do you want to modify it by:')
+		print('\nDo you want to modify it by:')
 		print('\t1. Updating Data')
 		print('\t2. Inserting Data')
 		print('\t3. Deleting Data')
@@ -143,7 +157,7 @@ class MLB:
 			self.modify_page()
 
 	def insert_page(self):
-		print('Do you want to insert new data to:')
+		print('\nDo you want to insert new data to:')
 		print('\t1. Teams Data')
 		print('\t2. Players Data')
 		print('\t3. At Bats Data')
@@ -480,7 +494,7 @@ class MLB:
 			self.insert_game_page()
 
 	def update_page(self):
-		print('Do you want to update:')
+		print('\nDo you want to update:')
 		print('\t1. Teams Data')
 		print('\t2. Players Data')
 		print('\t3. At Bats Data')
@@ -786,7 +800,7 @@ class MLB:
 			self.update_game_page()
 
 	def delete_page(self):
-		print('Do you want to delete:')
+		print('\nDo you want to delete:')
 		print('\t1. Teams Data')
 		print('\t2. Players Data')
 		print('\t3. At Bats Data')
@@ -1082,6 +1096,7 @@ class MLB:
 					self.game_info()
 		else:
 			self.print_game_info()
+			self.game_info()
 
 	def team_info(self):
 		print('\nGame Data: Combined Team Data')
@@ -1143,7 +1158,7 @@ class MLB:
 		print('2. (Away)', self.team_names[self.away])
 		self.nav = input('Enter the number of the team you want to view the Batter and Pitcher Stats for:')
 		if self.nav == '1' or self.nav == '2':
-			query = " select distinct inning, topInning, concat(b.firstName,' ', b.lastName) as batter, pt.bScore, concat(p.firstName, ' ', p.lastName) as pitcher, a.event, pt.on1B, pt.on2B, pt.on3B, pt.outs from AtBats a left join PlayerNames b on a.batterID = b.id left join PlayerNames p on a.pitcherID = p.id left join Pitches pt using (abID) where gID = " + str(self.gameID) + ";"
+			query = "select distinct abID, inning, topInning, concat(b.firstName,' ', b.lastName) as batter, pt.bScore, concat(p.firstName, ' ', p.lastName) as pitcher, a.event, pt.outs, concat(ep.firstName, ' ', ep.lastName) as ejectedPlayer, e.description from AtBats a left join PlayerNames b on a.batterID = b.id left join PlayerNames p on a.pitcherID = p.id left join Pitches pt using (abID) left join Ejections e using (abID) left join PlayerNames ep on e.playerID = ep.id where gID = " + str(self.gameID) + ";"
 			self.cursor.execute(query)
 			results = self.cursor.fetchall()
 
@@ -1152,12 +1167,15 @@ class MLB:
 			pitchers = {}
 
 			tb = PrettyTable()
-			tb.field_names = ['Batter', 'At Bats', 'Hits', 'Walks', 'RBI']
+			tb.field_names = ['Batting', 'AB', 'H', 'BB', 'RBI', 'SO', 'BA', 'OBP', 'SLG', 'OPS']
 			tb.align = 'l'
 
 			tp = PrettyTable()
-			tp.field_names = ['Pitcher', 'Innings Played', 'Hits', 'Walks', 'Strikeouts']
+			tp.field_names = ['Pitching', 'IP', 'H', 'ER', 'BB', 'SO', 'HR', 'ERA' ]
 			tp.align = 'l'
+
+			te = PrettyTable()
+			te.field_names = ['Ejected Player', 'Inning Ejected', 'Description']
 
 			if self.nav == '1':
 				# show home Stats
@@ -1165,37 +1183,109 @@ class MLB:
 				# home will bat at the bottom of the inning, so topInning = 'FALSE'
 				curr_score = 0
 				prev_batter = ''
+				ejected_players = []
+				prev_id = 0
+				seen = set()
 
 				for x in results:
-					if x[1] == 'TRUE':
+					if x[2] == 'TRUE':
 						continue
 					# batting stats include Player, At Bats, Runs, Hits, Walks, RBI
-					if x[2] not in batters:
-						# add the player to the set
-						batters[x[2]] = Batter()
 
-					if curr_score != x[3]:
+					# first check if someone was ejected
+					if x[8] is not None:
+						# someone was ejected
+						# make sure the person ejected was on our team
+						if x[9].split(' ')[0] == self.team_cities[self.away] and x[9].split(' ')[1] == self.team_names[self.away]:
+							if x[8] not in seen:
+								seen.add(x[8])
+								ejected_p = Ejected(x[8], x[1], x[9])
+								ejected_players.append(ejected_p)
+
+					# check if prev batter is the same (possible for double ejections on same play)
+					if prev_id == x[0]:
+						continue
+
+					if x[3] not in batters:
+						# add the player to the set
+						batters[x[3]] = Batter()
+
+					if curr_score != x[4]:
 						# at least 1 run has been made in the previous play
 						# increase the previous player's rbi by the score difference
-						batters[prev_batter].rbi += x[3] - curr_score
-						curr_score = x[3]
+						batters[prev_batter].rbi += x[4] - curr_score
+						curr_score = x[4]
 
-					if x[5] in not_at_bat:
-						if x[5] == 'Walk' or x[5] == 'Intent Walk':
-							batters[x[2]].walks += 1
+					if x[6] in not_at_bat:
+						if x[6] == 'Walk' or x[6] == 'Intent Walk':
+							batters[x[3]].walks += 1
+						else:
+							batters[x[3]].sacs += 1
 					else:
-						batters[x[2]].at_bats += 1
-						if x[5] in hit_legend:
-							batters[x[2]].hits += 1
+						batters[x[3]].at_bats += 1
+						if x[6] == 'Strikeout':
+							batters[x[3]].strikeouts += 1
+						elif x[6] in hit_legend:
+							batters[x[3]].hits += 1
+							if x[6] == 'Single':
+								batters[x[3]].singles += 1
+							elif x[6] == 'Double':
+								batters[x[3]].doubles += 1
+							elif x[7] == 'Triple':
+								batters[x[3]].triples += 1
+							else:
+								batters[x[3]].home_runs += 1
 
-					prev_batter = x[2]
+					prev_batter = x[3]
+					prev_id = x[0]
 
 				# add the rows using the batters dictionary
+				# add the rows using the batters dictionary
+				ab_total = 0
+				h_total = 0
+				bb_total = 0
+				rbi_total = 0
+				so_total = 0
+				ba_avg = 0.0
+				obp_avg = 0.0
+				slg_avg = 0.0
+				ops_avg = 0.0
+				count = 0.0
 				for key in batters:
-					tb.add_row([key, batters[key].at_bats, batters[key].hits, batters[key].walks, batters[key].rbi])
+					# tb.field_names = ['Batting', 'AB', 'H', 'BB', 'RBI', 'SO', 'BA', 'OBP', 'SLG', 'OPS']
+					ba = 0.000
+					obp = 0.000
+					slg = 0.000
+					ops = 0.000
+					if batters[key].at_bats > 0:
+						ba = round(float(batters[key].hits/batters[key].at_bats),3)
+						obp = round((batters[key].hits + batters[key].walks)/(batters[key].at_bats + batters[key].walks + batters[key].sacs), 3)
+						slg = round((batters[key].singles + 2 * batters[key].doubles + 3 * batters[key].triples + 4 * batters[key].home_runs)/batters[key].at_bats,3)
+						ops = obp + slg
+						ba_avg += ba
+						obp_avg += obp
+						slg_avg += slg
+						ops_avg += ops
+
+					ab_total += batters[key].at_bats
+					h_total += batters[key].hits
+					bb_total += batters[key].walks
+					rbi_total += batters[key].rbi
+					so_total += batters[key].strikeouts
+
+					tb.add_row([key, batters[key].at_bats, batters[key].hits, batters[key].walks, batters[key].rbi, batters[key].strikeouts, '{:.3f}'.format(ba), '{:.3f}'.format(obp), '{:.3f}'.format(slg), '{:.3f}'.format(ops)])
+					count += 1.0
+
+				# add the footer team total row
+				tb.add_row(['---------------','---','---','---','---','---','-----','-----','-----','-----'])
+				ba_avg = round(ba_avg/count,3)
+				obp_avg = round(obp_avg/count,3)
+				slg_avg = round(slg_avg/count,3)
+				ops_avg = round(ops_avg/count,3)
+				tb.add_row(['Team Totals', ab_total, h_total, bb_total, rbi_total, so_total, '{:.3f}'.format(ba_avg), '{:.3f}'.format(obp_avg), '{:.3f}'.format(slg_avg), '{:.3f}'.format(ops_avg)])
 
 				# print the table
-				batting_title = self.team_cities[self.home] + ' ' +  self.team_names[self.home] + ' Batting'
+				batting_title = self.team_cities[self.home] + ' ' +  self.team_names[self.home] + ' Batting Game Stats'
 				print(tb.get_string(title=batting_title))
 
 				# pitching stats
@@ -1204,58 +1294,163 @@ class MLB:
 				inning_pitcher = ''
 				full_pitch = True
 				inning_outs = 0
+				prev_batter = ''
+				prev_id = 0
+				prev_bscore = 0
+				earned_runs = 0
+
 				for x in results:
 					# pitching stats include Pitcher, Innings, Hits, Walks, Strikeouts
-					if x[1] == 'FALSE':
+					if x[2] == 'FALSE':
+						continue
+
+					# first check if someone was ejected
+					if x[8] is not None:
+						# someone was ejected
+						# make sure the person ejected was on our team
+						if x[9].split(' ')[0] == self.team_cities[self.away] and x[9].split(' ')[1] == self.team_names[self.away]:
+							if x[8] not in seen:
+								seen.add(x[8])
+								ejected_p = Ejected(x[8], x[1], x[9])
+								ejected_players.append(ejected_p)
+
+					if prev_id == x[0]:
 						continue
 
 					# innings are in terms of outs
 					# 3 outs made = 1 inning pitched
 					# 1 out = 1/3 or 0.1, 2 outs = 2/3 or 0.2
-					if x[4] not in pitchers:
-						pitchers[x[4]] = Pitcher()
+					if x[5] not in pitchers:
+						pitchers[x[5]] = Pitcher()
 
 					if curr_inning == 0:
-						curr_inning = x[0]
-						inning_pitcher = x[4]
+						curr_inning = x[1]
+						inning_pitcher = x[5]
 
-					if curr_inning != x[0]:
+					if curr_inning != x[1]:
 						if full_pitch == False:
-							pitchers[inning_pitcher].innings += (float(3.0 - inning_outs) * 0.1)
+							o = 3 - inning_outs
+							# innings pitched is weird in MLB
+							# 1 out = 0.1, 2 outs = 0.2, 3 outs = 1.0 (full inning pitched)
+							while o > 0:
+								num = int((pitchers[inning_pitcher].innings * 10) % 10)
+								if num == 2:
+									# the current pitched 2 outs, so the next out will make him pitch 1 full inning
+									pitchers[inning_pitcher].innings += 0.8
+								else:
+									pitchers[inning_pitcher].innings += 0.1
+								o -= 1
 						else:
 							pitchers[inning_pitcher].innings += 1.0
-						curr_inning = x[0]
-						inning_pitcher = x[4]
+						curr_inning = x[1]
+						inning_pitcher = x[5]
 						full_pitch = True
 						inning_outs = 0
 
-					if inning_pitcher != x[4]:
+					if inning_pitcher != x[5]:
 						# pitcher changed during the inning
+
+						# first tally how many runs the pitcher allowed
+						pitchers[inning_pitcher].runs += x[4] - earned_runs
+						earned_runs = x[4]
+
 						full_pitch = False
-						o = x[9] - inning_outs
-						pitchers[inning_pitcher].innings += float(o) * 0.1
-						inning_outs = x[9]
-						inning_pitcher = x[4]
+						o = x[7] - inning_outs
+						# innings pitched is weird in MLB
+						# 1 out = 0.1, 2 outs = 0.2, 3 outs = 1.0 (full inning pitched)
+						while o > 0:
+							num = int((pitchers[inning_pitcher].innings * 10) % 10)
+							if num == 2:
+								# the current pitched 2 outs, so the next out will make him pitch 1 full inning
+								pitchers[inning_pitcher].innings += 0.8
+							else:
+								pitchers[inning_pitcher].innings += 0.1
+							o -= 1
+						inning_outs = x[7]
+						inning_pitcher = x[5]
 
-					if x[5] in hit_legend:
-						pitchers[x[4]].hits += 1
+					if x[6] in hit_legend:
+						pitchers[x[5]].hits += 1
+						if x[6] == 'Home Run':
+							pitchers[x[5]].home_runs += 1
 					else:
-						if x[5] == 'Walk' or x[5] == 'Intent Walk':
-							pitchers[x[4]].walks += 1
-						elif x[5] == 'Strikeout':
-							pitchers[x[4]].strikeouts += 1
+						if x[6] == 'Walk' or x[6] == 'Intent Walk':
+							pitchers[x[5]].walks += 1
+						elif x[6] == 'Strikeout':
+							pitchers[x[5]].strikeouts += 1
+					prev_batter = x[3]
+					prev_id = x[0]
+					prev_bscore = x[4]
 
+				# calculate how many runs the last pitcher allowed
+				pitchers[inning_pitcher].runs += prev_bscore - earned_runs
 				# calculate innings played for last pitcher
 				if full_pitch == False:
-					pitchers[inning_pitcher].innings += (float(3.0 - inning_outs) * 0.1)
+					o = 3 - inning_outs
+					# innings pitched is weird in MLB
+					# 1 out = 0.1, 2 outs = 0.2, 3 outs = 1.0 (full inning pitched)
+					while o > 0:
+						num = int((pitchers[inning_pitcher].innings * 10) % 10)
+						if num == 2:
+							# the current pitched 2 outs, so the next out will make him pitch 1 full inning
+							pitchers[inning_pitcher].innings += 0.8
+						else:
+							pitchers[inning_pitcher].innings += 0.1
+						o -= 1
 				else:
 					pitchers[inning_pitcher].innings += 1.0
 
+				i_total = 0
+				h_total = 0
+				er_total = 0
+				bb_total = 0
+				so_total = 0
+				hr_total = 0
+				era_avg = 0
+				rem = 0
 				for key in pitchers:
-					tp.add_row([key, pitchers[key].innings, pitchers[key].hits, pitchers[key].walks, pitchers[key].strikeouts])
+					# ['Pitching', 'IP', 'H', 'ER', 'BB', 'SO', 'HR', 'ERA' ]
+					era = 0.0
+					if pitchers[key].innings > 0.0:
+						era = round(9.0 * pitchers[key].runs / pitchers[key].innings,2)
+						era_avg += era
 
-				pitching_title = self.team_cities[self.home] + ' ' + self.team_names[self.home] + ' Pitching'
+					# int((pitchers[inning_pitcher].innings * 10) % 10)
+					# have to add the innings the same way as before
+					if pitchers[key].innings.is_integer():
+						i_total += int(pitchers[key].innings)
+					else:
+						# have to add the runs individually
+						# first add the whole number
+						i_total += int(math.floor(pitchers[key].innings))
+						r = int((round(pitchers[key].innings - math.floor(pitchers[key].innings),1) * 10) % 10)
+						rem += r
+						# rem can increase by 1, 2, or 3
+						# keep track of the remainder, add it at the end
+
+					h_total += pitchers[key].hits
+					er_total += pitchers[key].runs
+					bb_total += pitchers[key].walks
+					so_total += pitchers[key].strikeouts
+					hr_total += pitchers[key].home_runs
+
+					tp.add_row([key, pitchers[key].innings, pitchers[key].hits, pitchers[key].runs, pitchers[key].walks, pitchers[key].strikeouts, pitchers[key].home_runs, '{:.2f}'.format(era)])
+					count += 1.0
+
+				i_total += int(rem /3)
+				era_avg = round(era_avg / count,2)
+				tp.add_row(['---------------','---','---','---','---','---','---', '----'])
+				tp.add_row(['Team Totals', i_total, h_total, er_total, bb_total, so_total, hr_total, '{:.2f}'.format(era_avg)])
+
+
+				for e in ejected_players:
+					te.add_row([e.player, e.inning[0], e.des])
+
+				pitching_title = self.team_cities[self.home] + ' ' + self.team_names[self.home] + ' Pitching Game Stats'
 				print(tp.get_string(title=pitching_title))
+
+				if len(ejected_players) > 0:
+					print(te.get_string(title='Ejected Players'))
 
 			else:
 				# show away stats
@@ -1263,36 +1458,106 @@ class MLB:
 				# away team bats at the top of the inning
 				curr_score = 0
 				prev_batter = ''
+				ejected_players = []
+				seen = set()
+				prev_id = 0
+
 				for x in results:
-					if x[1] == 'FALSE':
+					if x[2] == 'FALSE':
 						continue
 					# batting stats include Player, At Bats, Runs, Hits, Walks, RBI
-					if x[2] not in batters:
-						# add the player to the set
-						batters[x[2]] = Batter()
+					# first check if someone was ejected
+					if x[8] is not None:
+						# someone was ejected
+						# make sure the person ejected was on our team
+						if x[9].split(' ')[0] == self.team_cities[self.away] and x[9].split(' ')[1] == self.team_names[self.away]:
+							if x[8] not in seen:
+								seen.add(x[8])
+								ejected_p = Ejected(x[8], x[1], x[9])
+								ejected_players.append(ejected_p)
 
-					if curr_score != x[3]:
+					if prev_id == x[0]:
+						continue
+
+					if x[3] not in batters:
+						# add the player to the set
+						batters[x[3]] = Batter()
+
+					if curr_score != x[4]:
 						# at least 1 run has been made in the previous play
 						# increase the previous player's rbi by the score difference
-						batters[prev_batter].rbi += x[3] - curr_score
-						curr_score = x[3]
+						batters[prev_batter].rbi += x[4] - curr_score
+						curr_score = x[4]
 
-					if x[5] in not_at_bat:
-						if x[5] == 'Walk' or x[5] == 'Intent Walk':
-							batters[x[2]].walks += 1
+					if x[6] in not_at_bat:
+						if x[6] == 'Walk' or x[6] == 'Intent Walk':
+							batters[x[3]].walks += 1
+						else:
+							batters[x[3]].sacs += 1
 					else:
-						batters[x[2]].at_bats += 1
-						if x[5] in hit_legend:
-							batters[x[2]].hits += 1
+						batters[x[3]].at_bats += 1
+						if x[6] == 'Strikeout':
+							batters[x[3]].strikeouts += 1
+						elif x[6] in hit_legend:
+							batters[x[3]].hits += 1
+							if x[6] == 'Single':
+								batters[x[3]].singles += 1
+							elif x[6] == 'Double':
+								batters[x[3]].doubles += 1
+							elif x[7] == 'Triple':
+								batters[x[3]].triples += 1
+							else:
+								batters[x[3]].home_runs += 1
 
-					prev_batter = x[2]
+					prev_batter = x[3]
+					prev_id = x[0]
 
 				# add the rows using the batters dictionary
+				ab_total = 0
+				h_total = 0
+				bb_total = 0
+				rbi_total = 0
+				so_total = 0
+				ba_avg = 0.0
+				obp_avg = 0.0
+				slg_avg = 0.0
+				ops_avg = 0.0
+				count = 0.0
 				for key in batters:
-					tb.add_row([key, batters[key].at_bats, batters[key].hits, batters[key].walks, batters[key].rbi])
+					# tb.field_names = ['Batting', 'AB', 'H', 'BB', 'RBI', 'SO', 'BA', 'OBP', 'SLG', 'OPS']
+					ba = 0.000
+					obp = 0.000
+					slg = 0.000
+					ops = 0.000
+					if batters[key].at_bats > 0:
+						ba = round(float(batters[key].hits/batters[key].at_bats),3)
+						obp = round((batters[key].hits + batters[key].walks)/(batters[key].at_bats + batters[key].walks + batters[key].sacs), 3)
+						slg = round((batters[key].singles + 2 * batters[key].doubles + 3 * batters[key].triples + 4 * batters[key].home_runs)/batters[key].at_bats,3)
+						ops = obp + slg
+						ba_avg += ba
+						obp_avg += obp
+						slg_avg += slg
+						ops_avg += ops
+
+					ab_total += batters[key].at_bats
+					h_total += batters[key].hits
+					bb_total += batters[key].walks
+					rbi_total += batters[key].rbi
+					so_total += batters[key].strikeouts
+
+					tb.add_row([key, batters[key].at_bats, batters[key].hits, batters[key].walks, batters[key].rbi, batters[key].strikeouts, '{:.3f}'.format(ba), '{:.3f}'.format(obp), '{:.3f}'.format(slg), '{:.3f}'.format(ops)])
+					count += 1.0
+
+				# add the footer team total row
+				tb.add_row(['---------------','---','---','---','---','---','-----','-----','-----','-----'])
+				ba_avg = round(ba_avg/count,3)
+				obp_avg = round(obp_avg/count,3)
+				slg_avg = round(slg_avg/count,3)
+				ops_avg = round(ops_avg/count,3)
+				tb.add_row(['Team Totals', ab_total, h_total, bb_total, rbi_total, so_total, '{:.3f}'.format(ba_avg), '{:.3f}'.format(obp_avg), '{:.3f}'.format(slg_avg), '{:.3f}'.format(ops_avg)])
 
 				# print the table
-				batting_title = self.team_cities[self.away] + ' ' +  self.team_names[self.away] + ' Batting'
+				batting_title = self.team_cities[self.away] + ' ' +  self.team_names[self.away] + ' Batting Game Stats'
 				print(tb.get_string(title=batting_title))
 
 				# pitching stats
@@ -1301,54 +1566,163 @@ class MLB:
 				curr_inning = 0
 				full_pitch = True
 				inning_outs = 0
+				prev_batter = ''
+				prev_id = 0
+				prev_bscore = 0
+				earned_runs = 0
+
 				for x in results:
-					if x[1] == 'TRUE':
+					if x[2] == 'TRUE':
 						continue
-					# pitching stats include Pitcher, Innings, Hits, Walks, Strikeouts
-					if x[4] not in pitchers:
-						pitchers[x[4]] = Pitcher()
+
+					# first check if someone was ejected
+					if x[8] is not None:
+						# someone was ejected
+						# make sure the person ejected was on our team
+						if x[9].split(' ')[0] == self.team_cities[self.away] and x[9].split(' ')[1] == self.team_names[self.away]:
+							if x[8] not in seen:
+								seen.add(x[8])
+								ejected_p = Ejected(x[8], x[1], x[9])
+								ejected_players.append(ejected_p)
+
+					if prev_id == x[0]:
+						continue
+
+					# innings are in terms of outs
+					# 3 outs made = 1 inning pitched
+					# 1 out = 1/3 or 0.1, 2 outs = 2/3 or 0.2
+					if x[5] not in pitchers:
+						pitchers[x[5]] = Pitcher()
 
 					if curr_inning == 0:
-						curr_inning = x[0]
-						inning_pitcher = x[4]
+						curr_inning = x[1]
+						inning_pitcher = x[5]
 
-					if curr_inning != x[0]:
+					if curr_inning != x[1]:
 						if full_pitch == False:
-							pitchers[inning_pitcher].innings += (float(3.0 - inning_outs) * 0.1)
+							o = 3 - inning_outs
+							# innings pitched is weird in MLB
+							# 1 out = 0.1, 2 outs = 0.2, 3 outs = 1.0 (full inning pitched)
+							while o > 0:
+								num = int((pitchers[inning_pitcher].innings * 10) % 10)
+								if num == 2:
+									# the current pitched 2 outs, so the next out will make him pitch 1 full inning
+									pitchers[inning_pitcher].innings += 0.8
+								else:
+									pitchers[inning_pitcher].innings += 0.1
+								o -= 1
 						else:
 							pitchers[inning_pitcher].innings += 1.0
-						curr_inning = x[0]
-						inning_pitcher = x[4]
+						curr_inning = x[1]
+						inning_pitcher = x[5]
 						full_pitch = True
 						inning_outs = 0
 
-					if inning_pitcher != x[4]:
+					if inning_pitcher != x[5]:
+						# first tally how many runs the pitcher allowed
+						pitchers[inning_pitcher].runs += x[4] - earned_runs
+						earned_runs = x[4]
+
 						# pitcher changed during the inning
 						full_pitch = False
-						o = x[9] - inning_outs
-						pitchers[inning_pitcher].innings += float(o) * 0.1
-						inning_outs = x[9]
-						inning_pitcher = x[4]
+						o = x[7] - inning_outs
+						# innings pitched is weird in MLB
+						# 1 out = 0.1, 2 outs = 0.2, 3 outs = 1.0 (full inning pitched)
+						while o > 0:
+							num = int((pitchers[inning_pitcher].innings * 10) % 10)
+							if num == 2:
+								# the current pitched 2 outs, so the next out will make him pitch 1 full inning
+								pitchers[inning_pitcher].innings += 0.8
+							else:
+								pitchers[inning_pitcher].innings += 0.1
+							o -= 1
+						inning_outs = x[7]
+						inning_pitcher = x[5]
 
-					if x[5] in hit_legend:
-						pitchers[x[4]].hits += 1
+					if x[6] in hit_legend:
+						pitchers[x[5]].hits += 1
+						if x[6] == 'Home Run':
+							pitchers[x[5]].home_runs += 1
 					else:
-						if x[5] == 'Walk' or x[5] == 'Intent Walk':
-							pitchers[x[4]].walks += 1
-						elif x[5] == 'Strikeout':
-							pitchers[x[4]].strikeouts += 1
+						if x[6] == 'Walk' or x[6] == 'Intent Walk':
+							pitchers[x[5]].walks += 1
+						elif x[6] == 'Strikeout':
+							pitchers[x[5]].strikeouts += 1
+					prev_batter = x[3]
+					prev_id = x[0]
+					prev_bscore = x[4]
+
+				# calculate how many runs the last pitcher allowed
+				pitchers[inning_pitcher].runs += prev_bscore - earned_runs
 
 				# calculate the innings pitched for the last pitcher
 				if full_pitch == False:
-					pitchers[inning_pitcher].innings += (float(3.0 - inning_outs) * 0.1)
+					o = 3 - inning_outs
+					# innings pitched is weird in MLB
+					# 1 out = 0.1, 2 outs = 0.2, 3 outs = 1.0 (full inning pitched)
+					while o > 0:
+						num = int((pitchers[inning_pitcher].innings * 10) % 10)
+						if num == 2:
+							# the current pitched 2 outs, so the next out will make him pitch 1 full inning
+							pitchers[inning_pitcher].innings += 0.8
+						else:
+							pitchers[inning_pitcher].innings += 0.1
+						o -= 1
 				else:
 					pitchers[inning_pitcher].innings += 1.0
 
+				i_total = 0
+				h_total = 0
+				er_total = 0
+				bb_total = 0
+				so_total = 0
+				hr_total = 0
+				era_avg = 0
+				count = 0.0
+				rem = 0
 				for key in pitchers:
-					tp.add_row([key, pitchers[key].innings, pitchers[key].hits, pitchers[key].walks, pitchers[key].strikeouts])
+					# ['Pitching', 'IP', 'H', 'ER', 'BB', 'SO', 'HR', 'ERA' ]
+					era = 0.0
+					if pitchers[key].innings > 0.0:
+						era = round(9.0 * pitchers[key].runs / pitchers[key].innings,2)
+						era_avg += era
 
-				pitching_title = self.team_cities[self.away] + ' ' + self.team_names[self.away] + ' Pitching'
+					# int((pitchers[inning_pitcher].innings * 10) % 10)
+					# have to add the innings the same way as before
+					if pitchers[key].innings.is_integer():
+						i_total += int(pitchers[key].innings)
+					else:
+						# have to add the runs individually
+						# first add the whole number
+						i_total += int(math.floor(pitchers[key].innings))
+						r = int((round(pitchers[key].innings - math.floor(pitchers[key].innings),1) * 10) % 10)
+						rem += r
+						# rem can increase by 1, 2, or 3
+						# keep track of the remainder, add it at the end
+
+					h_total += pitchers[key].hits
+					er_total += pitchers[key].runs
+					bb_total += pitchers[key].walks
+					so_total += pitchers[key].strikeouts
+					hr_total += pitchers[key].home_runs
+
+					tp.add_row([key, pitchers[key].innings, pitchers[key].hits, pitchers[key].runs, pitchers[key].walks, pitchers[key].strikeouts, pitchers[key].home_runs, '{:.2f}'.format(era)])
+					count += 1.0
+
+				i_total += int(rem /3)
+				era_avg = round(era_avg / count,2)
+				tp.add_row(['---------------','---','---','---','---','---','---', '----'])
+				tp.add_row(['Team Totals', i_total, h_total, er_total, bb_total, so_total, hr_total, '{:.2f}'.format(era_avg)])
+
+				for e in ejected_players:
+					te.add_row([e.player, e.inning[0], e.des])
+
+				pitching_title = self.team_cities[self.away] + ' ' + self.team_names[self.away] + ' Pitching Game Stats'
 				print(tp.get_string(title=pitching_title))
+
+				if len(ejected_players) > 0:
+					print(te.get_string(title='Ejected Players'))
+
 			self.print_game_details()
 		elif self.nav == 'back':
 			self.game_info()
@@ -1661,12 +2035,12 @@ class MLB:
 			print(t.get_string(title='Overall Batting Stats'))
 
 			tb = PrettyTable()
-			tb.field_names = ['Year', 'Games Played', 'Record', 'At Bats', 'Hits', 'Singles', 'Doubles', 'Triples', 'Home Runs', 'OBP', 'BA', 'SLG']
+			tb.field_names = ['Year', 'Games Played', 'Record', 'At Bats', 'Hits', 'Singles', 'Doubles', 'Triples', 'Home Runs', 'BA', 'OBP', 'SLG', 'OPS']
 			tb.align = 'l'
 
 			for i in range(0, 4):
 				if at_bats[i] > 0:
-					tb.add_row([self.years[i], win_count[i] + loss_count[i], str(win_count[i]) + '-' + str(loss_count[i]), at_bats[i], hits[i], singles[i], doubles[i], triples[i], home_runs[i], round(float(times_on_base[i]/at_bats[i]),3), round(float(hits[i]/at_bats[i]),3), round((singles[i] + 2 * doubles[i] + 3 * triples[i] + 4 * home_runs[i])/at_bats[i],4)])
+					tb.add_row([self.years[i], win_count[i] + loss_count[i], str(win_count[i]) + '-' + str(loss_count[i]), at_bats[i], hits[i], singles[i], doubles[i], triples[i], home_runs[i], round(float(hits[i]/at_bats[i]),3), round(float(times_on_base[i]/at_bats[i]),3), round((singles[i] + 2 * doubles[i] + 3 * triples[i] + 4 * home_runs[i])/at_bats[i],3), round(round(float(times_on_base[i]/at_bats[i]),3) + round((singles[i] + 2 * doubles[i] + 3 * triples[i] + 4 * home_runs[i])/at_bats[i],3),3)])
 
 			print(tb.get_string(title='Yearly Batting Stats'))
 
