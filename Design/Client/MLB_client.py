@@ -128,11 +128,14 @@ class MLB:
 	def view_page(self):
 		print('\nDo you want to view:')
 		print('\t1. Game Data')
-		print('\t2. Player Data')
+		print('\t2. Team Data')
+		print('\t3. Player Data')
 		self.nav = input('Enter where you want to go: ')
 		if self.nav == '1':
-			self.game_page()
+			self.game_info()
 		elif self.nav == '2':
+			self.team_info()
+		elif self.nav == '3':
 			self.player_page()
 		elif self.nav == 'home':
 			self.home_page()
@@ -1022,26 +1025,6 @@ class MLB:
 				print('Invalid Input')
 			self.delete_game_page()
 
-	def game_page(self):
-		print('\nGame Data')
-		print('Do you want to view:')
-		print('\t1. A Single Game')
-		print('\t2. Combined Team Data')
-		self.nav = input('Enter where you want to go: ')
-		if self.nav == '1':
-			self.game_info()
-		elif self.nav == '2':
-			self.team_info()
-		elif self.nav == 'home':
-			self.home_page()
-		elif self.nav == 'back':
-			self.view_page()
-		elif self.nav == 'exit':
-			self.cleanup()
-		else:
-			print('Invalid Input')
-			self.game_page()
-
 	def player_page(self):
 		print('\nPlayer Data')
 		print('Do you want to view:')
@@ -1068,7 +1051,7 @@ class MLB:
 		print('Input format: \"<home_team>, <away_team>, <yyyy-mm-dd>\". (Example: Cubs, Cardinals, 2015-04-05)')
 		self.nav = input('Enter the home team, away team, and the date of the game you are looking for : ')
 		if self.nav == 'back':
-			self.game_page()
+			self.view_page()
 		elif self.nav == 'home':
 			self.home_page()
 		elif self.nav == 'exit':
@@ -1109,12 +1092,12 @@ class MLB:
 			self.game_info()
 
 	def team_info(self):
-		print('\nGame Data: Combined Team Data')
+		print('\nTeam Data')
 		print('Type \"show teams\" to display all active teams')
 		print('Input format: \"<team_name>\". Do not include the city. (Example: Blue Jays)')
 		self.nav = input('Enter the team\'s name of the team you are looking for: ')
 		if self.nav == 'back':
-			self.game_page()
+			self.view_page()
 		elif self.nav == 'home':
 			self.home_page()
 		elif self.nav == 'exit':
@@ -1125,6 +1108,7 @@ class MLB:
 		else:
 			# get the info for that team
 			self.print_team_info()
+			self.print_team_ejection_info()
 			self.team_info()
 
 	def print_game_info(self):
@@ -1158,6 +1142,7 @@ class MLB:
 				t.add_row(['Weather', str(results[15]) + ' degrees'])
 				t.add_row(['Wind', str(results[16]) + ' mph,' + results[17]])
 				table_title = results[2] + ' ' + results[3] + ' at ' + results[0] + ' ' + results[1] + ' on ' + results[9].strftime("%Y-%m-%d")
+				print('')
 				print(t.get_string(title=table_title))
 				self.print_game_details()
 		else:
@@ -1186,6 +1171,7 @@ class MLB:
 
 			te = PrettyTable()
 			te.field_names = ['Ejected Player', 'Inning Ejected', 'Description']
+			te.align = 'l'
 
 			if self.nav == '1':
 				# show home Stats
@@ -1296,6 +1282,7 @@ class MLB:
 
 				# print the table
 				batting_title = self.team_cities[self.home] + ' ' +  self.team_names[self.home] + ' Batting Game Stats'
+				print('')
 				print(tb.get_string(title=batting_title))
 
 				# pitching stats
@@ -1457,9 +1444,11 @@ class MLB:
 					te.add_row([e.player, e.inning[0], e.des])
 
 				pitching_title = self.team_cities[self.home] + ' ' + self.team_names[self.home] + ' Pitching Game Stats'
+				print('')
 				print(tp.get_string(title=pitching_title))
 
 				if len(ejected_players) > 0:
+					print('')
 					print(te.get_string(title='Ejected Players'))
 
 			else:
@@ -1568,6 +1557,7 @@ class MLB:
 
 				# print the table
 				batting_title = self.team_cities[self.away] + ' ' +  self.team_names[self.away] + ' Batting Game Stats'
+				print('')
 				print(tb.get_string(title=batting_title))
 
 				# pitching stats
@@ -1728,9 +1718,11 @@ class MLB:
 					te.add_row([e.player, e.inning[0], e.des])
 
 				pitching_title = self.team_cities[self.away] + ' ' + self.team_names[self.away] + ' Pitching Game Stats'
+				print('')
 				print(tp.get_string(title=pitching_title))
 
 				if len(ejected_players) > 0:
+					print('')
 					print(te.get_string(title='Ejected Players'))
 
 			self.print_game_details()
@@ -1750,15 +1742,8 @@ class MLB:
 			print('Team does not exist')
 			self.team_info()
 		else:
-			query = """
-				select gameYear, sum(runs), sum(runsAllowed), sum(games), sum(wins), sum(attendance) from
-				  (
-				    (select year(gameDate) as gameYear, sum(homeFinalScore) as runs, sum(awayFinalScore) as runsAllowed, count(gID) as games, count(case when winningTeam = 'TOR' then 1 else null end) as wins, sum(attendance) as attendance from Games
-				      where homeTeam='TOR' group by year(gameDate))
-				    union all
-				    (select year(gameDate) as gameYear, sum(awayFinalScore) as runs, sum(awayFinalScore) as runsAllowed, count(gID) as games, count(case when winningTeam = 'TOR' then 1 else null end) as wins, 0 as attendance from Games where awayTeam = 'TOR' group by year(gameDate)
-				  )) teamGames group by gameYear;
-			"""
+			query = "select gameYear, sum(runs), sum(runsAllowed), sum(games), sum(wins), sum(attendance) from ((select year(gameDate) as gameYear, sum(homeFinalScore) as runs, sum(awayFinalScore) as runsAllowed, count(gID) as games, count(case when winningTeam = '" + self.team_abbrev[self.nav] + "' then 1 else null end) as wins, sum(attendance) as attendance from Games where homeTeam='" + self.team_abbrev[self.nav] + "' group by year(gameDate)) union all (select year(gameDate) as gameYear, sum(awayFinalScore) as runs, sum(awayFinalScore) as runsAllowed, count(gID) as games, count(case when winningTeam = 'TOR' then 1 else null end) as wins, 0 as attendance from Games where awayTeam = 'TOR' group by year(gameDate))) teamGames group by gameYear;"
+
 			self.cursor.execute(query)
 			results = self.cursor.fetchall()
 			full_team = self.team_cities[self.team_abbrev[self.nav]] + ' ' + self.nav + ' 2015-2018'
@@ -1767,6 +1752,7 @@ class MLB:
 			t.align='l'
 			for x in results:
 				t.add_row([x[0], str(x[4]) + '-' + str(int(x[3])-int(x[4])), x[1], round(float(x[1])/float(x[4]),2), x[2], round(float(x[2])/float(x[4]),2), x[5]])
+			print('')
 			print(t.get_string(title=full_team))
 
 	def pitcher_info(self):
@@ -1792,9 +1778,21 @@ class MLB:
 			else:
 				last_name = inputs[0]
 				first_name = inputs[1]
-				# get and print the basic player info
-				self.print_pitcher_info()
-				self.pitcher_info()
+
+				query = "select id from PlayerNames where firstName = '" + first_name + "' and lastName = '" + last_name + "';"
+				self.cursor.execute(query)
+				# get the number of rows
+				results = self.cursor.fetchone()
+				if not results:
+					print('Player Does Not Exist!')
+					self.pitcher_info()
+				else:
+					# have the id, so now can get the rest of the player data
+					self.playerID = results[0]
+					print('\n' + first_name + ' ' + last_name)
+					self.print_pitcher_info()
+					self.print_player_ejection_info()
+					self.pitcher_info()
 
 	def batter_info(self):
 		print('\nPlayer Data: Batters')
@@ -1820,359 +1818,393 @@ class MLB:
 			else:
 				last_name = inputs[0]
 				first_name = inputs[1]
-				# get and print the basic player info
-				self.print_batter_info()
-				self.batter_info()
+				query = "select id from PlayerNames where firstName = '" + first_name + "' and lastName = '" + last_name + "';"
+				self.cursor.execute(query)
+				# get the number of rows
+				results = self.cursor.fetchone()
+				if not results:
+					print('Player Does Not Exist!')
+					self.batter_info()
+				else:
+					# have the id, so now can get the rest of the player data
+					self.playerID = results[0]
+					print('\n' + first_name + ' ' + last_name)
+					self.print_batter_info()
+					self.print_player_ejection_info()
+					self.batter_info()
 
 	def print_pitcher_info(self):
-		# first check that the player exists
-		# split the string
-		inputs = self.nav.split(', ')
-		last_name = inputs[0]
-		first_name = inputs[1]
+		# note that the visiting team always bats at the top of the inning
+		# earned run average = earned runs / innings pitched  * 9
+		query = "select a.gID, p.pitchNum, g.homeTeam, g.awayTeam, p.bScore, g.winningTeam, a.topInning, a.pitchDir, a.event from AtBats a left join Games g using(gID) left join Pitches p using (abID) where pitcherID = " + str(self.playerID) + ";"
 
-		query = "select id from PlayerNames where firstName = '" + first_name + "' and lastName = '" + last_name + "';"
+		# print the data
 		self.cursor.execute(query)
-		# get the number of rows
-		results = self.cursor.fetchone()
-		if not results:
-			print('Player Does Not Exist!')
-			self.pitcher_info()
+		results = self.cursor.fetchall()
+
+		if self.cursor.rowcount == 0:
+			print('Player is not a pitcher')
+			return
+
+		hand = []
+		teams = []
+
+		win_count = [0,0,0,0]
+		loss_count = [0,0,0,0]
+		games_started = [0,0,0,0]
+		inning_count = [0.0,0.0,0.0,0.0]
+		earned_runs = [0,0,0,0]
+		strikeout_count = [0,0,0,0]
+		home_run_count = [0,0,0,0]
+		walk_count = [0,0,0,0]
+		hit_count = [0,0,0,0]
+		pitch_count = [0,0,0,0]
+		hit_batter_count = [0,0,0,0]
+		intent_walk_count = [0,0,0,0]
+		at_bat_count = [0,0,0,0]
+
+		inning_total = 0.0
+
+		gId = 0
+		prev_bscore = 0
+		# Earned Run Average (ERA) = Earned Runs / Innings Pitched * 9, where Earned Runs is just the bScore
+		for x in results:
+			# separate the stats based on year (from the first 4 digits of the gID)
+			yr = int(str(x[0])[:4])
+
+			# year can be from 2015 - 2018
+			yr = yr - 2015
+
+			# add the pitch count
+			pitch_count[yr] += 1
+
+			# only calculate the rest of the stats on the first pitchNum
+			if x[1] != 1:
+				continue
+
+			# check the pitchDir
+			hand_dir = 'Left-Handed' if x[7] == 'L' else 'Right-Handed'
+			if hand_dir not in hand:
+				hand.append(hand_dir)
+			# if topInning is true, then that means the visiting team is batting, so player is on the home team
+			if x[6] == 'TRUE':
+				team = self.team_cities[x[2]] + ' ' + self.team_names[x[2]]
+				if team not in teams:
+					teams.append(team)
+			else:
+				team = self.team_cities[x[3]] + ' ' + self.team_names[x[3]]
+				if team not in teams:
+					teams.append(team)
+
+			if x[8] not in not_at_bat:
+				at_bat_count[yr] += 1
+
+			# tally the earns runed in Total
+			if gId != x[0] and gId != 0:
+				earned_runs[yr] += prev_bscore
+
+			# hard to judge innings played, so let's just do it based on the event
+			# we can know number of outs based on the event
+			if x[8] in hit_legend:
+				hit_count[yr] += 1
+				if x[8] == 'Home Run':
+					home_run_count[yr] += 1
+			elif 'Walk' in x[8]:
+				if x[8] == 'Intent Walk':
+					intent_walk_count[yr] += 1
+				walk_count[yr] += 1
+			elif x[8] == 'Hit By Pitch':
+				hit_batter_count[yr] += 1
+			elif 'Strikeout' in x[8]:
+				strikeout_count[yr] += 1
+			elif x[8] == 'Triple Play':
+				# 3 outs in this play
+				inning_count[yr] = self.inning_add_out(inning_count[yr], 3)
+				inning_total = self.inning_add_out(inning_total, 3)
+			elif 'DP' in x[8] or x[8] == 'Double Play':
+				# two outs in this play
+				inning_count[yr] = self.inning_add_out(inning_count[yr], 2)
+				inning_total = self.inning_add_out(inning_total, 2)
+			elif 'out' in x[8] or 'Out' in x[8] or 'Sac' in x[8]:
+				# 1 out in this play
+				inning_count[yr] = self.inning_add_out(inning_count[yr], 1)
+				inning_total = self.inning_add_out(inning_total, 1)
+
+			# check the game counter
+			if gId != x[0]:
+				gId = x[0]
+				# if he started the game, the first record for that game should be inning 1
+				if x[1] == 1:
+					games_started[yr] += 1
+				# check who wins and loses and increment accordingly
+				# if he pitches on top inning, then he plays for the home team
+				if (x[5] == x[2] and x[6] == 'TRUE') or (x[5] == x[3] and x[6] == 'FALSE'):
+					win_count[yr] += 1
+				else:
+					loss_count[yr] += 1
+
+			prev_bscore = x[4]
+
+		# print the calulcated stats
+
+		if len(hand) == 2:
+			print('Pitching: Ambidexterous')
 		else:
-			# have the id, so now can get the rest of the player data
-			self.playerID = results[0]
-			# note that the visiting team always bats at the top of the inning
-			# earned run average = earned runs / innings pitched  * 9
-			query = "select a.gID, p.pitchNum, g.homeTeam, g.awayTeam, p.bScore, g.winningTeam, a.topInning, a.pitchDir, a.event from AtBats a left join Games g using(gID) left join Pitches p using (abID) where pitcherID = " + str(self.playerID) + ";"
+			print('Pitching: ' + hand[0])
+		print('\nPast and Current Teams:')
+		print(*teams, sep = "\n")
+		print('')
 
-			# print the data
-			self.cursor.execute(query)
-			results = self.cursor.fetchall()
+		tb = PrettyTable()
+		tb.field_names = (['Year', 'G', 'GS', 'W-L', 'ERA', 'IP', 'H', 'ER', 'HR', 'NP', 'HB', 'BB', 'IBB', 'SO', 'AVG', 'WHIP'])
+		tb.align = 'l'
 
-			if self.cursor.rowcount == 0:
-				print('Player is not a pitcher')
-				return
+		era_sum = 0.0
+		whip_sum = 0.0
+		avg_sum = 0.0
+		games_sum = 0
+		year_count = 0.0
+		for i in range(0, 4):
+			era = 0.0
+			whip = 0.0
+			avg = 0.0
+			if inning_count[i] > 0:
+				era = round(earned_runs[i] / inning_count[i] * 9.0,2)
+				whip = round((walk_count[i] + hit_count[i]) / inning_count[i],2)
+				era_sum += era
+				whip_sum += whip
+				year_count += 1.0
+			games = win_count[i] + loss_count[i]
+			games_sum += games
+			if at_bat_count[i] > 0:
+				avg = round(hit_count[i] / at_bat_count[i],3)
+				avg_sum += avg
+			record = str(win_count[i]) + '-' + str(loss_count[i])
+			tb.add_row([self.years[i], games, games_started[i], record, '{:.2f}'.format(era), inning_count[i], hit_count[i], earned_runs[i], home_run_count[i], pitch_count[i], hit_batter_count[i], walk_count[i], intent_walk_count[i], strikeout_count[i], '{:.3f}'.format(avg), '{:.2f}'.format(whip)])
 
-			hand = []
-			teams = []
+		tb.add_row(['------------', '----', '----', '-------', '------', '-------', '-----', '----', '----', '------', '----', '----', '-----', '-----', '------', '------'])
+		era_sum = round(era_sum/year_count,2)
+		whip_sum = round(whip_sum/year_count,2)
+		avg_sum = round(avg_sum/year_count,3)
 
-			win_count = [0,0,0,0]
-			loss_count = [0,0,0,0]
-			games_started = [0,0,0,0]
-			inning_count = [0.0,0.0,0.0,0.0]
-			earned_runs = [0,0,0,0]
-			strikeout_count = [0,0,0,0]
-			home_run_count = [0,0,0,0]
-			walk_count = [0,0,0,0]
-			hit_count = [0,0,0,0]
-			pitch_count = [0,0,0,0]
-			hit_batter_count = [0,0,0,0]
-			intent_walk_count = [0,0,0,0]
-			at_bat_count = [0,0,0,0]
+		record = str(sum(win_count)) + '-' + str(sum(loss_count))
+		tb.add_row(['Player Totals', games_sum, sum(games_started), record, '{:.2f}'.format(era_sum), sum(inning_count), sum(hit_count), sum(earned_runs), sum(home_run_count), sum(pitch_count), sum(hit_batter_count), sum(walk_count), sum(intent_walk_count), sum(strikeout_count), '{:.3f}'.format(avg_sum), '{:.2f}'.format(whip_sum)])
 
-			inning_total = 0.0
+		print('')
+		print(tb.get_string(title='Yearly Pitching Stats'))
 
-			gId = 0
-			prev_bscore = 0
-			# Earned Run Average (ERA) = Earned Runs / Innings Pitched * 9, where Earned Runs is just the bScore
-			for x in results:
-				# separate the stats based on year (from the first 4 digits of the gID)
-				yr = int(str(x[0])[:4])
+		# grab and print pitch stats
+		query = "select pitchType, count(pitchType), avg(p.startSpeed), avg(p.endSpeed), avg(p.spinRate) from Pitches p left join AtBats a using (abID) where a.pitcherID = " + str(self.playerID) + " group by p.pitchType;"
+		self.cursor.execute(query)
+		results = self.cursor.fetchall()
 
-				# year can be from 2015 - 2018
-				yr = yr - 2015
+		t = PrettyTable()
+		t.field_names = ['Pitch Type', 'Total Thrown', 'Average Start Speed (MPH)', 'Average End Speed (MPH)', 'Average Spin Rate']
+		t.align = 'l'
 
-				# add the pitch count
-				pitch_count[yr] += 1
+		throw_total = 0
+		avg_start_speed = 0.0
+		avg_end_speed = 0.0
+		avg_spin_rate = 0.0
+		count = 0.0
 
-				# only calculate the rest of the stats on the first pitchNum
-				if x[1] != 1:
-					continue
+		for x in results:
+			if x[0] in pitch_legend:
+				t.add_row([pitch_legend[x[0]], x[1], '{:.2f}'.format(round(x[2],2)), '{:.2f}'.format(round(x[3],2)), '{:.2f}'.format(round(x[4],2))])
+				throw_total += x[1]
+				avg_start_speed += round(x[2],2)
+				avg_end_speed += round(x[3],2)
+				avg_spin_rate += round(x[4],2)
+				count += 1.0
 
-				# check the pitchDir
-				hand_dir = 'Left-Handed' if x[7] == 'L' else 'Right-Handed'
-				if hand_dir not in hand:
-					hand.append(hand_dir)
-				# if topInning is true, then that means the visiting team is batting, so player is on the home team
-				if x[6] == 'TRUE':
+		avg_start_speed = round(avg_start_speed / count,2)
+		avg_end_speed = round(avg_end_speed / count,2)
+		avg_spin_rate = round(avg_spin_rate / count,2)
+
+		t.add_row(['--------------------', '--------------', '---------------------------', '-------------------------', '-------------------+'])
+		t.add_row(['Player Totals', throw_total, '{:.2f}'.format(avg_start_speed), '{:.2f}'.format(avg_end_speed), '{:.2f}'.format(avg_spin_rate)])
+		print('')
+		print(t.get_string(title='Pitch Breakdown'))
+
+	def print_batter_info(self):
+		query = "select a.gID, g.homeTeam, g.awayTeam, g.winningTeam, a.inning, a.topInning, a.batDir, a.event from AtBats a left join Games g using (gID)  where batterID = " + str(self.playerID) + ";"
+		self.cursor.execute(query)
+		results = self.cursor.fetchall()
+
+		if self.cursor.rowcount == 0:
+			print('Player is not a batter')
+			return
+
+		# now gotta parse through all the data
+		bat_dir = []
+		teams = []
+
+		win_count = [0,0,0,0]
+		loss_count = [0,0,0,0]
+		at_bats = [0,0,0,0]
+		plate_appearance = [0,0,0,0]
+		singles = [0,0,0,0]
+		doubles = [0,0,0,0]
+		triples = [0,0,0,0]
+		home_runs = [0,0,0,0]
+		hits = [0,0,0,0]
+		gId = 0
+		times_on_base = [0,0,0,0]
+
+		# batting average = hits / at bats
+		# a hit = single, double, triple, homerun
+		for x in results:
+			# separate the stats based on year (from the first 4 digits of the gID)
+			yr = int(str(x[0])[:4])
+
+			# year can be from 2015 - 2018
+			yr = yr - 2015
+
+			plate_appearance[yr] += 1
+			# at bat does not include walks, hits by pitch, sacrifices
+			if x[7] not in not_at_bat:
+				at_bats[yr] += 1
+			if x[7] in hit_legend:
+				hits[yr] += 1
+			if x[7] in on_base_legend:
+				times_on_base[yr] += 1
+
+			if x[7] == 'Single':
+				singles[yr] += 1
+			elif x[7] == 'Double':
+				doubles[yr] += 1
+			elif x[7] == 'Triple':
+				triples[yr] += 1
+			elif x[7] == 'Home Run':
+				home_runs[yr] += 1
+
+			# check the game counter
+			if gId != x[0]:
+				gId = x[0]
+				# check who wins and loses and increment accordingly
+				# batting at the top of the inning = playing for away team
+				if (x[3] == x[2] and x[5] == 'TRUE') or (x[3] == x[1] and x[5] == 'FALSE'):
+					win_count[yr] += 1
+				else:
+					loss_count[yr] += 1
+
+				# check the batDir
+				dir = 'Left-Handed' if x[6] == 'L' else 'Right-Handed'
+				if dir not in bat_dir:
+					bat_dir.append(dir)
+				# if topInning is true, then that means the visiting team is batting, so player is on the away team
+				if x[5] == 'TRUE':
 					team = self.team_cities[x[2]] + ' ' + self.team_names[x[2]]
 					if team not in teams:
 						teams.append(team)
 				else:
-					team = self.team_cities[x[3]] + ' ' + self.team_names[x[3]]
+					team = self.team_cities[x[1]] + ' ' + self.team_names[x[1]]
 					if team not in teams:
 						teams.append(team)
 
-				if x[8] not in not_at_bat:
-					at_bat_count[yr] += 1
-
-				# tally the earns runed in Total
-				if gId != x[0] and gId != 0:
-					earned_runs[yr] += prev_bscore
-
-				# hard to judge innings played, so let's just do it based on the event
-				# we can know number of outs based on the event
-				if x[8] in hit_legend:
-					hit_count[yr] += 1
-					if x[8] == 'Home Run':
-						home_run_count[yr] += 1
-				elif 'Walk' in x[8]:
-					if x[8] == 'Intent Walk':
-						intent_walk_count[yr] += 1
-					walk_count[yr] += 1
-				elif x[8] == 'Hit By Pitch':
-					hit_batter_count[yr] += 1
-				elif 'Strikeout' in x[8]:
-					strikeout_count[yr] += 1
-				elif x[8] == 'Triple Play':
-					# 3 outs in this play
-					inning_count[yr] = self.inning_add_out(inning_count[yr], 3)
-					inning_total = self.inning_add_out(inning_total, 3)
-				elif 'DP' in x[8] or x[8] == 'Double Play':
-					# two outs in this play
-					inning_count[yr] = self.inning_add_out(inning_count[yr], 2)
-					inning_total = self.inning_add_out(inning_total, 2)
-				elif 'out' in x[8] or 'Out' in x[8] or 'Sac' in x[8]:
-					# 1 out in this play
-					inning_count[yr] = self.inning_add_out(inning_count[yr], 1)
-					inning_total = self.inning_add_out(inning_total, 1)
-
-				# check the game counter
-				if gId != x[0]:
-					gId = x[0]
-					# if he started the game, the first record for that game should be inning 1
-					if x[1] == 1:
-						games_started[yr] += 1
-					# check who wins and loses and increment accordingly
-					# if he pitches on top inning, then he plays for the home team
-					if (x[5] == x[2] and x[6] == 'TRUE') or (x[5] == x[3] and x[6] == 'FALSE'):
-						win_count[yr] += 1
-					else:
-						loss_count[yr] += 1
-
-				prev_bscore = x[4]
-
-			# print the calulcated stats
-			print('\n' + first_name + ' ' + last_name)
-			if len(hand) == 2:
-				print('Ambidexterous')
-			else:
-				print(hand[0])
-			print('\nPast and Current Teams:')
-			print(*teams, sep = "\n")
-
-			tb = PrettyTable()
-			tb.field_names = (['Year', 'G', 'GS', 'W-L', 'ERA', 'IP', 'H', 'ER', 'HR', 'NP', 'HB', 'BB', 'IBB', 'SO', 'AVG', 'WHIP'])
-			tb.align = 'l'
-
-			era_sum = 0.0
-			whip_sum = 0.0
-			avg_sum = 0.0
-			games_sum = 0
-			year_count = 0.0
-			for i in range(0, 4):
-				era = 0.0
-				whip = 0.0
-				avg = 0.0
-				if inning_count[i] > 0:
-					era = round(earned_runs[i] / inning_count[i] * 9.0,2)
-					whip = round((walk_count[i] + hit_count[i]) / inning_count[i],2)
-					era_sum += era
-					whip_sum += whip
-					year_count += 1.0
-				games = win_count[i] + loss_count[i]
-				games_sum += games
-				if at_bat_count[i] > 0:
-					avg = round(hit_count[i] / at_bat_count[i],3)
-					avg_sum += avg
-				record = str(win_count[i]) + '-' + str(loss_count[i])
-				tb.add_row([self.years[i], games, games_started[i], record, '{:.2f}'.format(era), inning_count[i], hit_count[i], earned_runs[i], home_run_count[i], pitch_count[i], hit_batter_count[i], walk_count[i], intent_walk_count[i], strikeout_count[i], '{:.3f}'.format(avg), '{:.2f}'.format(whip)])
-
-			tb.add_row(['------------', '----', '----', '-------', '------', '-------', '-----', '----', '----', '------', '----', '----', '-----', '-----', '------', '------'])
-			era_sum = round(era_sum/year_count,2)
-			whip_sum = round(whip_sum/year_count,2)
-			avg_sum = round(avg_sum/year_count,3)
-
-			record = str(sum(win_count)) + '-' + str(sum(loss_count))
-			tb.add_row(['Player Totals', games_sum, sum(games_started), record, '{:.2f}'.format(era_sum), sum(inning_count), sum(hit_count), sum(earned_runs), sum(home_run_count), sum(pitch_count), sum(hit_batter_count), sum(walk_count), sum(intent_walk_count), sum(strikeout_count), '{:.3f}'.format(avg_sum), '{:.2f}'.format(whip_sum)])
-
-			print(tb.get_string(title='Yearly Pitching Stats'))
-
-			# grab and print pitch stats
-			query = "select pitchType, count(pitchType), avg(p.startSpeed), avg(p.endSpeed), avg(p.spinRate) from Pitches p left join AtBats a using (abID) where a.pitcherID = " + str(self.playerID) + " group by p.pitchType;"
-			self.cursor.execute(query)
-			results = self.cursor.fetchall()
-
-			t = PrettyTable()
-			t.field_names = ['Pitch Type', 'Total Thrown', 'Average Start Speed (MPH)', 'Average End Speed (MPH)', 'Average Spin Rate']
-			t.align = 'l'
-
-			throw_total = 0
-			avg_start_speed = 0.0
-			avg_end_speed = 0.0
-			avg_spin_rate = 0.0
-			count = 0.0
-
-			for x in results:
-				if x[0] in pitch_legend:
-					t.add_row([pitch_legend[x[0]], x[1], '{:.2f}'.format(round(x[2],2)), '{:.2f}'.format(round(x[3],2)), '{:.2f}'.format(round(x[4],2))])
-					throw_total += x[1]
-					avg_start_speed += round(x[2],2)
-					avg_end_speed += round(x[3],2)
-					avg_spin_rate += round(x[4],2)
-					count += 1.0
-
-			avg_start_speed = round(avg_start_speed / count,2)
-			avg_end_speed = round(avg_end_speed / count,2)
-			avg_spin_rate = round(avg_spin_rate / count,2)
-
-			t.add_row(['--------------------', '--------------', '---------------------------', '-------------------------', '-------------------+'])
-			t.add_row(['Player Totals', throw_total, '{:.2f}'.format(avg_start_speed), '{:.2f}'.format(avg_end_speed), '{:.2f}'.format(avg_spin_rate)])
-
-			print(t.get_string(title='Pitch Breakdown'))
-
-	def print_batter_info(self):
-		# first check that the player exists
-		# split the string
-		inputs = self.nav.split(', ')
-		last_name = inputs[0]
-		first_name = inputs[1]
-
-		query = "select id from PlayerNames where firstName = '" + first_name + "' and lastName = '" + last_name + "';"
-		self.cursor.execute(query)
-		# get the number of rows
-		results = self.cursor.fetchone()
-		if not results:
-			print('Player Does Not Exist!')
-			self.batter_info()
+		# print the calulcated stats
+		if len(bat_dir) == 2:
+			print('Batting: Ambidexterous')
 		else:
-			# have the id, so now can get the rest of the player data
-			self.playerID = results[0]
+			print('Batting: ' + bat_dir[0])
+		print('\nPast and Current Teams:')
+		print(*teams, sep = "\n")
+		print('')
 
-			query = "select a.gID, g.homeTeam, g.awayTeam, g.winningTeam, a.inning, a.topInning, a.batDir, a.event from AtBats a left join Games g using (gID)  where batterID = " + str(self.playerID) + ";"
-			self.cursor.execute(query)
-			results = self.cursor.fetchall()
+		tb = PrettyTable()
+		tb.field_names = ['Year', 'GP', 'W-L', 'AB', 'H', '1B', '2B', '3B', 'HR', 'BA', 'OBP', 'SLG', 'OPS']
+		tb.align = 'l'
 
-			if self.cursor.rowcount == 0:
-				print('Player is not a batter')
-				return
+		yr_count = 0.0
+		ba_avg = 0.0
+		obp_avg = 0.0
+		slg_avg = 0.0
+		ops_avg = 0.0
 
-			# now gotta parse through all the data
-			bat_dir = []
-			teams = []
+		for i in range(0, 4):
+			games = win_count[i] + loss_count[i]
+			record = str(win_count[i]) + '-' + str(loss_count[i])
+			ba = 0.0
+			obp = 0.0
+			slg = 0.0
+			ops = 0.0
+			if at_bats[i] > 0:
+				ba = round(float(hits[i]/at_bats[i]),3)
+				ba_avg += ba
+				obp = round(float(times_on_base[i]/at_bats[i]),3)
+				obp_avg += obp
+				slg = round((singles[i] + 2 * doubles[i] + 3 * triples[i] + 4 * home_runs[i])/at_bats[i],3)
+				slg_avg += slg
+				ops = obp + slg
+				ops_avg += ops
+				yr_count += 1.0
+			tb.add_row([self.years[i], games, record, at_bats[i], hits[i], singles[i], doubles[i], triples[i], home_runs[i], '{:.3f}'.format(ba), '{:.3f}'.format(obp), '{:.3f}'.format(slg), '{:.3f}'.format(ops)])
 
-			win_count = [0,0,0,0]
-			loss_count = [0,0,0,0]
-			at_bats = [0,0,0,0]
-			plate_appearance = [0,0,0,0]
-			singles = [0,0,0,0]
-			doubles = [0,0,0,0]
-			triples = [0,0,0,0]
-			home_runs = [0,0,0,0]
-			hits = [0,0,0,0]
-			gId = 0
-			times_on_base = [0,0,0,0]
+		ba_avg = round(ba_avg/yr_count,3)
+		obp_avg = round(obp_avg/yr_count,3)
+		slg_avg = round(slg_avg/yr_count,3)
+		ops_avg = round(ops_avg/yr_count,3)
+		game_sum = sum(win_count) + sum(loss_count)
+		record = str(sum(win_count)) + '-' + str(sum(loss_count))
 
-			# batting average = hits / at bats
-			# a hit = single, double, triple, homerun
-			for x in results:
-				# separate the stats based on year (from the first 4 digits of the gID)
-				yr = int(str(x[0])[:4])
+		tb.add_row(['-------------', '----', '-------', '-------', '------', '-------', '-----', '----', '----', '------', '----', '----', '-----'])
+		tb.add_row(['Player Totals', game_sum, record, sum(at_bats), sum(hits), sum(singles), sum(doubles), sum(triples), sum(home_runs), '{:.3f}'.format(ba_avg), '{:.3f}'.format(obp_avg), '{:.3f}'.format(slg_avg), '{:.3f}'.format(ops_avg)])
+		print('')
+		print(tb.get_string(title='Yearly Batting Stats'))
 
-				# year can be from 2015 - 2018
-				yr = yr - 2015
+	def print_player_ejection_info(self):
+		# have the playerID, so just run query on ejection on playerID
+		query = "select g.gameDate, g.homeTeam, g.awayTeam, e.team, a.inning, e.argueBallsStrikes, e.correctEjection from Ejections e left join AtBats a using (abID) left join Games g using (gID) where playerID =" + str(self.playerID) + ";"
+		self.cursor.execute(query)
+		results = self.cursor.fetchall()
 
-				plate_appearance[yr] += 1
-				# at bat does not include walks, hits by pitch, sacrifices
-				if x[7] not in not_at_bat:
-					at_bats[yr] += 1
-				if x[7] in hit_legend:
-					hits[yr] += 1
-				if x[7] in on_base_legend:
-					times_on_base[yr] += 1
+		te = PrettyTable()
+		te.field_names = ['Game', 'Team', 'Inning', 'Argue BS', 'Correct']
+		te.align = 'l'
+		te.title = 'Player Ejections'
 
-				if x[7] == 'Single':
-					singles[yr] += 1
-				elif x[7] == 'Double':
-					doubles[yr] += 1
-				elif x[7] == 'Triple':
-					triples[yr] += 1
-				elif x[7] == 'Home Run':
-					home_runs[yr] += 1
-
-				# check the game counter
-				if gId != x[0]:
-					gId = x[0]
-					# check who wins and loses and increment accordingly
-					# batting at the top of the inning = playing for away team
-					if (x[3] == x[2] and x[5] == 'TRUE') or (x[3] == x[1] and x[5] == 'FALSE'):
-						win_count[yr] += 1
-					else:
-						loss_count[yr] += 1
-
-					# check the batDir
-					dir = 'Left-Handed' if x[6] == 'L' else 'Right-Handed'
-					if dir not in bat_dir:
-						bat_dir.append(dir)
-					# if topInning is true, then that means the visiting team is batting, so player is on the away team
-					if x[5] == 'TRUE':
-						team = self.team_cities[x[2]] + ' ' + self.team_names[x[2]]
-						if team not in teams:
-							teams.append(team)
-					else:
-						team = self.team_cities[x[1]] + ' ' + self.team_names[x[1]]
-						if team not in teams:
-							teams.append(team)
-
-			# print the calulcated stats
-			print('\n' + first_name + ' ' + last_name)
-			if len(bat_dir) == 2:
-				print('Ambidexterous')
+		for x in results:
+			home_team = self.team_cities[x[1]] + ' ' + self.team_names[x[1]]
+			away_team = self.team_cities[x[2]] + ' ' + self.team_names[x[2]]
+			player_team = self.team_cities[x[3]] + ' ' + self.team_names[x[3]]
+			game = away_team + ' at ' + home_team + ', ' + x[0].strftime("%Y-%m-%d")
+			bs = 'Yes' if x[5] == 'TRUE' else 'No'
+			corr = ''
+			if x[6] is None:
+				corr = 'N/A'
 			else:
-				print(bat_dir[0])
-			print('\nPast and Current Teams:')
-			print(*teams, sep = "\n")
+				corr = 'Yes' if x[6] == 'TRUE' else 'No'
 
-			tb = PrettyTable()
-			tb.field_names = ['Year', 'GP', 'W-L', 'AB', 'H', '1B', '2B', '3B', 'HR', 'BA', 'OBP', 'SLG', 'OPS']
-			tb.align = 'l'
+			te.add_row([game, player_team, x[4], bs, corr])
 
-			yr_count = 0.0
-			ba_avg = 0.0
-			obp_avg = 0.0
-			slg_avg = 0.0
-			ops_avg = 0.0
+		print('')
+		print(te)
 
-			for i in range(0, 4):
-				games = win_count[i] + loss_count[i]
-				record = str(win_count[i]) + '-' + str(loss_count[i])
-				ba = 0.0
-				obp = 0.0
-				slg = 0.0
-				ops = 0.0
-				if at_bats[i] > 0:
-					ba = round(float(hits[i]/at_bats[i]),3)
-					ba_avg += ba
-					obp = round(float(times_on_base[i]/at_bats[i]),3)
-					obp_avg += obp
-					slg = round((singles[i] + 2 * doubles[i] + 3 * triples[i] + 4 * home_runs[i])/at_bats[i],3)
-					slg_avg += slg
-					ops = obp + slg
-					ops_avg += ops
-					yr_count += 1.0
-				tb.add_row([self.years[i], games, record, at_bats[i], hits[i], singles[i], doubles[i], triples[i], home_runs[i], '{:.3f}'.format(ba), '{:.3f}'.format(obp), '{:.3f}'.format(slg), '{:.3f}'.format(ops)])
+	def print_team_ejection_info(self):
+		# use self.nav to get the selected team abbreviation
+		query = " select g.homeTeam, g.awayTeam, g.gameDate, a.inning, p.firstName, p.lastName, e.argueBallsStrikes, e.correctEjection from Ejections e left join AtBats a using(abID) left join Games g using (gID) left join PlayerNames p on p.id = e.playerID  where e.team = '" + self.team_abbrev[self.nav] + "';"
+		self.cursor.execute(query)
+		results = self.cursor.fetchall()
 
-			ba_avg = round(ba_avg/yr_count,3)
-			obp_avg = round(obp_avg/yr_count,3)
-			slg_avg = round(slg_avg/yr_count,3)
-			ops_avg = round(ops_avg/yr_count,3)
-			game_sum = sum(win_count) + sum(loss_count)
-			record = str(sum(win_count)) + '-' + str(sum(loss_count))
+		te = PrettyTable()
+		te.title = 'Team Ejections'
+		te.field_names = ['Game', 'Inning', 'Player', 'Argue BS', 'Correct']
+		te.align = 'l'
 
-			tb.add_row(['-------------', '----', '-------', '-------', '------', '-------', '-----', '----', '----', '------', '----', '----', '-----'])
-			tb.add_row(['Player Totals', game_sum, record, sum(at_bats), sum(hits), sum(singles), sum(doubles), sum(triples), sum(home_runs), '{:.3f}'.format(ba_avg), '{:.3f}'.format(obp_avg), '{:.3f}'.format(slg_avg), '{:.3f}'.format(ops_avg)])
-			print(tb.get_string(title='Yearly Batting Stats'))
-
+		for x in results:
+			home_team = self.team_cities[x[0]] + ' ' + self.team_names[x[0]]
+			away_team = self.team_cities[x[1]] + ' ' + self.team_names[x[1]]
+			game = away_team + ' at ' + home_team + ', ' + x[2].strftime("%Y-%m-%d")
+			player = x[4] + ' ' + x[5]
+			bs = 'Yes' if x[6] == 'TRUE' else 'No'
+			corr = ''
+			if x[7] is None:
+				corr = 'N/A'
+			else:
+				corr = 'Yes' if x[7] == 'TRUE' else 'No'
+			te.add_row([game, x[3], player, bs, corr])
+		print('')
+		print(te)
 
 	def first_load(self):
 		# have to first load the team dictionary

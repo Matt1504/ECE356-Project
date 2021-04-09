@@ -229,7 +229,7 @@ ignore into table Ejections
       playerID = @playerID,
       team = upper(@team),
       description = @des,
-      argueBallsStrikes = if(@argueBallsStrikes = 'Y', 'TRUE', 'FALSE'),
+      argueBallsStrikes = if(@bs = 'Y', 'TRUE', 'FALSE'),
       correctEjection = if(@correct = 'C', 'TRUE', if(@correct = 'I', 'FALSE', null));
 
 update Ejections
