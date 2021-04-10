@@ -3,6 +3,7 @@ from mysql.connector import Error
 from prettytable import PrettyTable
 import datetime
 import math
+from getpass import getpass
 
 pitch_legend = {
 	'CH': 'Changeup',
@@ -62,8 +63,15 @@ class MLB:
 		self.home = ''
 		self.away = ''
 		self.gameID = 0
-		self.cnx = mysql.connector.connect(user='kh37lee', password='Zaqwsx@1021102', host='marmoset04.shoshin.uwaterloo.ca', database='project_36');
+
+		user_name = input('Enter SQL User: ')
+		pwd = getpass()
+		host_name = 'marmoset04.shoshin.uwaterloo.ca'
+		db = 'project_36'
+
+		self.cnx = mysql.connector.connect(user=user_name, password=pwd, host=host_name, database=db)
 		self.cursor = self.cnx.cursor()
+
 		self.years = ['2015', '2016', '2017', '2018']
 		self.team_names = {}
 		self.team_abbrev = {}
@@ -89,8 +97,21 @@ class MLB:
 		self.cursor.execute(query)
 		results = self.cursor.fetchall()
 		print('Below is all MLB Teams')
-		for x in results:
-			print(''.join(x))
+		length = self.cursor.rowcount
+		splt = math.ceil(length/5)
+		for i in range(splt + 1):
+			num_a = i + splt
+			num_b = i + (2 * splt)
+			num_c = i + (3 * splt)
+			num_d = i + (4 * splt)
+
+			first = results[i][0]
+			second = results[num_a][0] if num_a < length else ''
+			third = results[num_b][0] if num_b < length else ''
+			fourth = results[num_c][0] if num_c < length else ''
+			fifth = results[num_d][0] if num_d < length else ''
+
+			print('{:<20}{:<20}{:<20}{:<20}{:<}'.format(first,second,third, fourth, fifth))
 
 	def print_players(self, pitchers=True):
 		if pitchers:
@@ -101,8 +122,21 @@ class MLB:
 		# print the results
 		self.cursor.execute(query)
 		results = self.cursor.fetchall()
-		for x in results:
-			print(x[0])
+		length = self.cursor.rowcount
+		splt = math.ceil(length/5)
+		for i in range(splt + 1):
+			num_a = i + splt
+			num_b = i + (2 * splt)
+			num_c = i + (3 * splt)
+			num_d = i + (4 * splt)
+
+			first = results[i][0]
+			second = results[num_a][0] if num_a < length else ''
+			third = results[num_b][0] if num_b < length else ''
+			fourth = results[num_c][0] if num_c < length else ''
+			fifth = results[num_d][0] if num_d < length else ''
+
+			print('{:<20}{:<20}{:<20}{:<20}{:<}'.format(first,second,third, fourth, fifth))
 
 	def home_page(self):
 		print('\nWelcome to the MLB Stats Database for the 2015-2018 Regular Seasons')
@@ -173,9 +207,7 @@ class MLB:
 		print('\nDo you want to insert new data to:')
 		print('\t1. Teams Data')
 		print('\t2. Players Data')
-		print('\t3. At Bats Data')
-		print('\t4. Pitches Data')
-		print('\t5. Ejections Data')
+		print('\t3. Ejections Data')
 		print('\t4. Games Data')
 		self.nav = input('Enter where you want to go: ')
 		if self.nav == '1':
@@ -183,12 +215,8 @@ class MLB:
 		elif self.nav == '2':
 			self.insert_player_page()
 		elif self.nav == '3':
-			self.insert_atbat_page()
-		elif self.nav == '4':
-			self.insert_pitch_page()
-		elif self.nav == '5':
 			self.insert_ejection_page()
-		elif self.nav == '6':
+		elif self.nav == '4':
 			self.insert_game_page()
 		elif self.nav == 'home':
 			self.home_page()
@@ -217,28 +245,30 @@ class MLB:
 		else:
 			# we have some input
 			user_input = self.nav.split(", ")
-			if (len(user_input) != 3):
+			if len(user_input) != 3:
 				print('Invalid Input')
 				self.insert_team_page()
-			for team, abbrev in self.team_abbrev.items():
-				if (user_input[0] == abbrev):
-					print('Not a valid team name!')
+			else:
+				# check if abbreviation or short name already exists
+				if user_input[0] in self.team_abbrev or user_input[2] in self.team_names:
+					print('Abbreviation and Team Name must be unique.')
 					self.insert_team_page()
-			team_name = ""
-			index = 0
-			for x in user_input:
-				if (index != 0):
-					team_name += ", "
-				team_name = team_name + "\"" + x + "\""
-				index += 1
-			query = "insert into TeamNames values (" + team_name + ");"
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				print(f"The error '{e}' occurred")
-				print('Invalid Input')
+				else:
+					team_name = ""
+					index = 0
+					for x in user_input:
+						if index != 0:
+							team_name += ", "
+						team_name = team_name + "\"" + x + "\""
+						index += 1
+					query = "insert into TeamNames values (" + team_name + ");"
+					try:
+						self.cursor.execute(query)
+						self.cnx.commit()
+						print("Success!")
+					except Error as e:
+						print(f"The error '{e}' occurred")
+						print('Invalid Input')
 			self.insert_team_page()
 
 	def insert_player_page(self):
@@ -258,8 +288,21 @@ class MLB:
 			# print the results
 			self.cursor.execute(query)
 			results = self.cursor.fetchall()
-			for x in results:
-				print(x[0])
+			length = self.cursor.rowcount
+			splt = math.ceil(length/5)
+			for i in range(splt + 1):
+				num_a = i + splt
+				num_b = i + (2 * splt)
+				num_c = i + (3 * splt)
+				num_d = i + (4 * splt)
+
+				first = results[i][0]
+				second = results[num_a][0] if num_a < length else ''
+				third = results[num_b][0] if num_b < length else ''
+				fourth = results[num_c][0] if num_c < length else ''
+				fifth = results[num_d][0] if num_d < length else ''
+
+				print('{:<20}{:<20}{:<20}{:<20}{:<}'.format(first,second,third, fourth, fifth))
 			self.insert_player_page()
 		else:
 			# we have some input
@@ -283,132 +326,6 @@ class MLB:
 				print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.insert_player_page()
-
-	def insert_atbat_page(self):
-		print('\nInsert At Bat')
-		print('Input format: \"<At Bat ID>, <Game ID>, <Inning>, <Top Inning>, <Pitcher Score>, <Batter ID>, <Batting Direction>, <Pitcher ID>, <Pitching Direction>, <Play>, <Outs After>\". Must be valid IDs. Top Inning has T/F value')
-		print('Example: 2015000001, 201500001, 1, TRUE, 0, 000001, L, 000002, R, Strikeout, 1')
-		self.nav = input('Enter the at bat\'s info: ')
-		if self.nav == 'back':
-			self.insert_page()
-		elif self.nav == 'home':
-			self.home_page()
-		elif self.nav == 'exit':
-			self.cleanup()
-		else:
-			# we have some input
-			user_input = self.nav.split(", ")
-			if (len(user_input) != 11):
-				print('Invalid Input')
-				self.insert_atbat_page()
-			if (int(user_input[2]) > 9 or int(user_input[2]) < 1):
-				print('Invalid Input')
-				self.insert_atbat_page()
-			if (user_input[3].upper() != "TRUE" and user_input[3].upper() != "FALSE"):
-				print('Invalid Input')
-				self.insert_atbat_page()
-			if (int(user_input[4]) < 0):
-				print('Invalid Input')
-				self.insert_atbat_page()
-			if (int(user_input[5]) == int(user_input[7])):
-				print('Invalid Input')
-				self.insert_atbat_page()
-			if (user_input[6].upper() != "L" and user_input[6].upper() != "R"):
-				print('Invalid Input')
-				self.insert_atbat_page()
-			if (user_input[8].upper() != "L" and user_input[8].upper() != "R"):
-				print('Invalid Input')
-				self.insert_atbat_page()
-			if (int(user_input[10]) > 3 or int(user_input[10]) < 0):
-				print('Invalid Input')
-				self.insert_atbat_page()
-			atbat = ""
-			index = 0
-			for x in user_input:
-				if (index != 0):
-					atbat += ", "
-				if (index in [0, 1, 2, 4, 5, 7, 10]):
-					atbat = atbat + x
-				else:
-					atbat = atbat + "\"" + x + "\""
-				index += 1
-			query = "insert into AtBats values (" + atbat + ");"
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.insert_atbat_page()
-
-	def insert_pitch_page(self):
-		print('\nInsert Pitch')
-		print('Input format: \"<At Bat ID>, <Number of Pitch>, <Pitch Type>, <Start Speed>, <End Speed>, <Spin Rate>, <Play>, <Ball Count>, <Strike Count>, <Batter Score>, <Outs>, <on 1B>, <on 2B>, <on 3B>\". Must be valid ID and different numberof pitch for that particular at bat ID. Last three have T/F value')
-		print('Example: 2015000001, 1, FF, 90, 80, 2500, C, 0, 0, 0, 0, FALSE, FALSE, FALSE')
-		self.nav = input('Enter the pitch\'s info: ')
-		if self.nav == 'back':
-			self.insert_page()
-		elif self.nav == 'home':
-			self.home_page()
-		elif self.nav == 'exit':
-			self.cleanup()
-		else:
-			# we have some input
-			user_input = self.nav.split(", ")
-			if (len(user_input) != 14):
-				print('Invalid Input')
-				self.insert_pitch_page()
-			if (int(user_input[1]) < 1):
-				print('Invalid Input')
-				self.insert_pitch_page()
-			flag = False
-			for pitch, pitchType in pitch_legend.items():
-				if (user_input[2] == pitch):
-					flag = True
-			if (int(user_input[3]) < 0 or int(user_input[4]) < 0 or int(user_input[5]) < 0):
-				print('Invalid Input')
-				self.insert_pitch_page()
-			if (int(user_input[7]) > 4 or int(user_input[7]) < 0):
-				print('Invalid Input')
-				self.insert_pitch_page()
-			if (int(user_input[8]) > 3 or int(user_input[8]) < 0):
-				print('Invalid Input')
-				self.insert_pitch_page()
-			if (int(user_input[9]) < 0):
-				print('Invalid Input')
-				self.insert_pitch_page()
-			if (int(user_input[10]) < 0 or int(user_input[10]) > 3):
-				print('Invalid Input')
-				self.insert_pitch_page()
-			if (user_input[11].upper() != "TRUE" and user_input[11].upper() != "FALSE"):
-				print('Invalid Input')
-				self.insert_pitch_page()
-			if (user_input[12].upper() != "TRUE" and user_input[12].upper() != "FALSE"):
-				print('Invalid Input')
-				self.insert_pitch_page()
-			if (user_input[13].upper() != "TRUE" and user_input[13].upper() != "FALSE"):
-				print('Invalid Input')
-				self.insert_pitch_page()
-			pitch = ""
-			index = 0
-			for x in user_input:
-				if (index != 0):
-					pitch += ", "
-				if (index in [0, 1, 3, 4, 5, 7, 8, 9, 10]):
-					pitch = pitch + x
-				else:
-					pitch = pitch + "\"" + x + "\""
-				index += 1
-			query = "insert into Pitches values (" + pitch + ");"
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.insert_pitch_page()
 
 	def insert_ejection_page(self):
 		print('\nInsert Ejection')
@@ -510,22 +427,16 @@ class MLB:
 		print('\nDo you want to update:')
 		print('\t1. Teams Data')
 		print('\t2. Players Data')
-		print('\t3. At Bats Data')
-		print('\t4. Pitches Data')
-		print('\t5. Ejections Data')
-		print('\t6. Games Data')
+		print('\t3. Ejections Data')
+		print('\t4. Games Data')
 		self.nav = input('Enter where you want to go: ')
 		if self.nav == '1':
 			self.update_team_page()
 		elif self.nav == '2':
 			self.update_player_page()
 		elif self.nav == '3':
-			self.update_atbat_page()
-		elif self.nav == '4':
-			self.update_pitch_page()
-		elif self.nav == '5':
 			self.update_ejection_page()
-		elif self.nav == '6':
+		elif self.nav == '4':
 			self.update_game_page()
 		elif self.nav == 'home':
 			self.home_page()
@@ -610,132 +521,6 @@ class MLB:
 				print('Invalid Input')
 			self.update_player_page()
 
-	def update_atbat_page(self):
-		print('\nUpdate At Bat')
-		print('Input format: \"<At Bat ID>, <Game ID>, <Inning>, <Top Inning>, <Pitcher Score>, <Batter ID>, <Batting Direction>, <Pitcher ID>, <Pitching Direction>, <Play>, <Outs After>\". Must be valid IDs. Top Inning has T/F value')
-		print('Example: 2015000001, 201500001, 1, TRUE, 0, 000001, L, 000002, R, Strikeout, 1')
-		self.nav = input('Enter the at bat\'s info: ')
-		if self.nav == 'back':
-			self.update_page()
-		elif self.nav == 'home':
-			self.home_page()
-		elif self.nav == 'exit':
-			self.cleanup()
-		else:
-			# we have some input
-			user_input = self.nav.split(", ")
-			if (len(user_input) != 11):
-				print('Invalid Input')
-				self.update_atbat_page()
-			if (int(user_input[2]) > 9 or int(user_input[2]) < 1):
-				print('Invalid Input')
-				self.update_atbat_page()
-			if (user_input[3].upper() != "TRUE" and user_input[3].upper() != "FALSE"):
-				print('Invalid Input')
-				self.update_atbat_page()
-			if (int(user_input[4]) < 0):
-				print('Invalid Input')
-				self.update_atbat_page()
-			if (int(user_input[5]) == int(user_input[7])):
-				print('Invalid Input')
-				self.update_atbat_page()
-			if (user_input[6].upper() != "L" and user_input[6].upper() != "R"):
-				print('Invalid Input')
-				self.update_atbat_page()
-			if (user_input[8].upper() != "L" and user_input[8].upper() != "R"):
-				print('Invalid Input')
-				self.update_atbat_page()
-			if (int(user_input[10]) > 3 or int(user_input[10]) < 0):
-				print('Invalid Input')
-				self.update_atbat_page()
-			atbat = ""
-			index = 0
-			for x in user_input:
-				if (index != 0):
-					atbat += ", "
-				if (index in [0, 1, 2, 4, 5, 7, 10]):
-					atbat = atbat + x
-				else:
-					atbat = atbat + "\"" + x + "\""
-				index += 1
-			query = "update AtBats set gID=" + user_input[1] + ", inning=" + user_input[2] + ", topInning=\"" + user_input[3] + "\", pScore=" + user_input[4] + ", batterID=" + user_input[5] + ", batDir=\"" + user_input[6] + "\", pitcherID=" + user_input[7] + ", pitchDir=\"" + user_input[8] + "\", event=\"" + user_input[9] + "\", outsAfter=" + user_input[10] + " where abID=" + user_input[0] + ";"
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.update_atbat_page()
-
-	def update_pitch_page(self):
-		print('\nInsert Pitch')
-		print('Input format: \"<At Bat ID>, <Number of Pitch>, <Pitch Type>, <Start Speed>, <End Speed>, <Spin Rate>, <Play>, <Ball Count>, <Strike Count>, <Batter Score>, <Outs>, <on 1B>, <on 2B>, <on 3B>\". Must be valid ID and different numberof pitch for that particular at bat ID. Last three have T/F value')
-		print('Example: 2015000001, 1, FF, 90, 80, 2500, C, 0, 0, 0, 0, FALSE, FALSE, FALSE')
-		self.nav = input('Enter the pitch\'s info: ')
-		if self.nav == 'back':
-			self.update_page()
-		elif self.nav == 'home':
-			self.home_page()
-		elif self.nav == 'exit':
-			self.cleanup()
-		else:
-			# we have some input
-			user_input = self.nav.split(", ")
-			if (len(user_input) != 14):
-				print('Invalid Input')
-				self.update_pitch_page()
-			if (int(user_input[1]) < 1):
-				print('Invalid Input')
-				self.update_pitch_page()
-			flag = False
-			for pitch, pitchType in pitch_legend.items():
-				if (user_input[2] == pitch):
-					flag = True
-			if (int(user_input[3]) < 0 or int(user_input[4]) < 0 or int(user_input[5]) < 0):
-				print('Invalid Input')
-				self.update_pitch_page()
-			if (int(user_input[7]) > 4 or int(user_input[7]) < 0):
-				print('Invalid Input')
-				self.update_pitch_page()
-			if (int(user_input[8]) > 3 or int(user_input[8]) < 0):
-				print('Invalid Input')
-				self.update_pitch_page()
-			if (int(user_input[9]) < 0):
-				print('Invalid Input')
-				self.update_pitch_page()
-			if (int(user_input[10]) < 0 or int(user_input[10]) > 3):
-				print('Invalid Input')
-				self.update_pitch_page()
-			if (user_input[11].upper() != "TRUE" and user_input[11].upper() != "FALSE"):
-				print('Invalid Input')
-				self.update_pitch_page()
-			if (user_input[12].upper() != "TRUE" and user_input[12].upper() != "FALSE"):
-				print('Invalid Input')
-				self.update_pitch_page()
-			if (user_input[13].upper() != "TRUE" and user_input[13].upper() != "FALSE"):
-				print('Invalid Input')
-				self.update_pitch_page()
-			pitch = ""
-			index = 0
-			for x in user_input:
-				if (index != 0):
-					pitch += ", "
-				if (index in [0, 1, 3, 4, 5, 7, 8, 9, 10]):
-					pitch = pitch + x
-				else:
-					pitch = pitch + "\"" + x + "\""
-				index += 1
-			query = "update Pitches set pitchType=\"" + user_input[2] + "\", startSpeed=" + user_input[3] + ", endSpeed=" + user_input[4] + ", spinRate=" + user_input[5] + ", code=\"" + user_input[6] + "\", ballCount=" + user_input[7] + ", strikeCount=" + user_input[8] + ", bScore=" + user_input[9] + ", outs=" + user_input[10] + ", on1B=\"" + user_input[11] + "\", on2B=\"" + user_input[12] + "\", on3B=\"" + user_input[13] + "\" where abID=" + user_input[0] + " and pitchNum=" + user_input[1] + ";"
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.update_pitch_page()
-
 	def update_ejection_page(self):
 		print('\nUpdate Ejection')
 		print('Input format: \"<At Bat ID>, <Player ID>, <Team>, <Description>, <Arguing B/S>, <Correct Ejection>\". Must be valid IDs and Team. Last two are T/F value')
@@ -816,22 +601,16 @@ class MLB:
 		print('\nDo you want to delete:')
 		print('\t1. Teams Data')
 		print('\t2. Players Data')
-		print('\t3. At Bats Data')
-		print('\t4. Pitches Data')
-		print('\t5. Ejections Data')
-		print('\t6. Games Data')
+		print('\t3. Ejections Data')
+		print('\t4. Games Data')
 		self.nav = input('Enter where you want to go: ')
 		if self.nav == '1':
 			self.delete_team_page()
 		elif self.nav == '2':
 			self.delete_player_page()
 		elif self.nav == '3':
-			self.delete_atbat_page()
-		elif self.nav == '4':
-			self.delete_pitch_page()
-		elif self.nav == '5':
 			self.delete_ejection_page()
-		elif self.nav == '6':
+		elif self.nav == '4':
 			self.delete_game_page()
 		elif self.nav == 'home':
 			self.home_page()
@@ -900,68 +679,6 @@ class MLB:
 				print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.delete_player_page()
-
-	def delete_atbat_page(self):
-		print('\nDelete At Bat')
-		print('Input format: \"<At Bat ID>\". Must be a valid ID')
-		print('Example: 2015000001')
-		self.nav = input('Enter the at bat\'s info: ')
-		if self.nav == 'back':
-			self.delete_page()
-		elif self.nav == 'home':
-			self.home_page()
-		elif self.nav == 'exit':
-			self.cleanup()
-		else:
-			# we have some input
-			query = "delete from AtBats where abID=" + self.nav + ";"
-			print('Are you sure you want to delete this data?')
-			print('\t1. Yes')
-			print('\t2. No')
-			self.nav = input("Your decision: ")
-			if self.nav != '1':
-				self.delete_atbat_page()
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.delete_atbat_page()
-
-	def delete_pitch_page(self):
-		print('\nDelete Pitch')
-		print('Input format: \"<At Bat ID>, <Pitch Number>\". Must be a valid ID and Pitch Number')
-		print('Example: 2015000000, 1')
-		self.nav = input('Enter the pitch\'s info: ')
-		if self.nav == 'back':
-			self.delete_page()
-		elif self.nav == 'home':
-			self.home_page()
-		elif self.nav == 'exit':
-			self.cleanup()
-		else:
-			# we have some input
-			user_input = self.nav.split(", ")
-			if (len(user_input) != 2 or int(user_input[1]) <= 0):
-				print('Invalid Input')
-				self.delete_pitch_page()
-			query = "delete from Pitches where abID=" + user_input[0] + " and pitchNum=" + user_input[1] + ";"
-			print('Are you sure you want to delete this data?')
-			print('\t1. Yes')
-			print('\t2. No')
-			self.nav = input("Your decision: ")
-			if self.nav != '1':
-				self.delete_pitch_page()
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.delete_pitch_page()
 
 	def delete_ejection_page(self):
 		print('\nDelete Ejection')
@@ -2174,7 +1891,6 @@ class MLB:
 				corr = 'N/A'
 			else:
 				corr = 'Yes' if x[6] == 'TRUE' else 'No'
-
 			te.add_row([game, player_team, x[4], bs, corr])
 
 		print('')
@@ -2187,7 +1903,7 @@ class MLB:
 		results = self.cursor.fetchall()
 
 		te = PrettyTable()
-		te.title = 'Team Ejections'
+		te.title = 'Team Ejections 2015-2018'
 		te.field_names = ['Game', 'Inning', 'Player', 'Argue BS', 'Correct']
 		te.align = 'l'
 
