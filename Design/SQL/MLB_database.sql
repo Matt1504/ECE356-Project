@@ -61,6 +61,7 @@ create table Games (gID decimal(9),
   weatherDegrees int,
   windSpeedMpH int,
   windDirection char(15),
+  winningTeam char(3),
   primary key (gID),
   check(left(gID,4) = year(gameDate))
 );
@@ -84,7 +85,8 @@ ignore into table Games
       elapsedTime = @elapsedTime,
       weatherDegrees = substring(@weatherDegrees, 2, 2),
       windSpeedMpH = if(substring(@windSpeed,3,1) = ' ', substring(@windSpeed,2,1), substring(@windSpeed,2,2)),
-      windDirection = left(@windDirection, length(@windDirection) -1);
+      windDirection = left(@windDirection, length(@windDirection) -1),
+      winningTeam = if(@homeFinalScore > @awayFinalScore, @homeTeam, @awayTeam);
 
 insert into TeamNames select distinct homeTeam, '', '' from Games;
 
@@ -122,7 +124,8 @@ update TeamNames set city = 'Washington', shortName = 'Nationals' where abbrevia
 -- add back the foreign keys to the Games table after we have fully populated the TeamNames table
 alter table Games
   add foreign key (homeTeam) references TeamNames(abbreviation),
-  add foreign key (awayTeam) references TeamNames(abbreviation);
+  add foreign key (awayTeam) references TeamNames(abbreviation),
+  add foreign key (winningTeam) references TeamNames(abbreviation);
 
 create table AtBats (abID decimal(10),
   gID decimal(9),
@@ -226,7 +229,7 @@ ignore into table Ejections
       playerID = @playerID,
       team = upper(@team),
       description = @des,
-      argueBallsStrikes = if(@argueBallsStrikes = 'Y', 'TRUE', 'FALSE'),
+      argueBallsStrikes = if(@bs = 'Y', 'TRUE', 'FALSE'),
       correctEjection = if(@correct = 'C', 'TRUE', if(@correct = 'I', 'FALSE', null));
 
 update Ejections
