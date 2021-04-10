@@ -623,7 +623,7 @@ class MLB:
 			self.delete_page()
 
 	def delete_team_page(self):
-		print('\nDelete Pitch')
+		print('\nDelete Team')
 		print('Input format: \"<Abbreviation>\". Must be a valid abbreviation')
 		print('Example: TOR')
 		self.nav = input('Enter the team\'s info: ')
