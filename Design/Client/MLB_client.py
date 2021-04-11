@@ -98,7 +98,7 @@ class MLB:
 		results = self.cursor.fetchall()
 		print('Below is all MLB Teams')
 		length = self.cursor.rowcount
-		splt = math.ceil(length/5)
+		splt = math.ceil(length/6)
 		for i in range(splt + 1):
 			num_a = i + splt
 			num_b = i + (2 * splt)
@@ -764,7 +764,7 @@ class MLB:
 
 	def game_info(self):
 		print('\nGame Data: Single Game')
-		print('Type \"year\" to filter games by year, or \"team\" to filter games by team')
+		print('Type \"year team\" to filter games by year for a team')
 		print('Input format: \"<home_team>, <away_team>, <yyyy-mm-dd>\". (Example: Cubs, Cardinals, 2015-04-05)')
 		self.nav = input('Enter the home team, away team, and the date of the game you are looking for : ')
 		if self.nav == 'back':
@@ -773,37 +773,40 @@ class MLB:
 			self.home_page()
 		elif self.nav == 'exit':
 			self.cleanup()
-		elif self.nav == 'year' or self.nav == 'team':
-			if self.nav == 'year':
-				self.nav = input('Enter the desired year to display all games by that year (Ex: 2015): ')
-				print('showing games from ', self.nav)
-				# run query to get all games from that year
-				if self.nav not in self.years:
-					print('Not a valid year!')
-					self.game_info()
-				else:
-					query = "select concat(a.shortName, ', ', b.shortName, ', ', c.gameDate) from Games c left join TeamNames a on c.homeTeam = a.abbreviation left join TeamNames b on c.awayTeam = b.abbreviation where year(c.gameDate) = '" + self.nav + "';"
-					self.cursor.execute(query)
-					results = self.cursor.fetchall()
-					for x in results:
-						print(''.join(x))
-					self.game_info()
+		elif self.nav == 'year team':
+			# run query to get all team names
+			# print teams
+			self.print_teams(False)
+			self.nav = input('Enter the number of the games you want to see from the desired team for a given year (Ex: 2015, Blue Jays): ')
+			# run query to get all games from that team
+			# split the result 
+			inputs = self.nav.split(', ')
+			if len(inputs) != 2:
+				print('Not a valid team name!')
+				self.game_info()
+			elif inputs[1] not in self.team_abbrev or inputs[0] not in self.years:
+				print('Not a valid team name!')
+				self.game_info()
 			else:
-				# run query to get all team names
-				# print teams
-				self.print_teams(False)
-				self.nav = input('Enter the number of the games you want to see from the desired team (Ex: Blue Jays): ')
-				# run query to get all games from that team
-				if self.nav not in self.team_abbrev:
-					print('Not a valid team name!')
-					self.game_info()
-				else:
-					query = "select concat(a.shortName, ', ', b.shortName, ', ', c.gameDate) from Games c left join TeamNames a on c.homeTeam = a.abbreviation left join TeamNames b on c.awayTeam = b.abbreviation where a.shortName = '" + self.nav + "' or b.shortName = '" + self.nav + "';"
-					self.cursor.execute(query)
-					results = self.cursor.fetchall()
-					for x in results:
-						print(''.join(x))
-					self.game_info()
+				query = "select concat(a.shortName,', ', b.shortName, ', ', c.gameDate) from Games c left join TeamNames a on c.homeTeam = a.abbreviation left join TeamNames b on c.awayTeam = b.abbreviation where year(gameDate) = " + inputs[0] + " and (homeTeam = '" + self.team_abbrev[inputs[1]] + "' or awayTeam = '" + self.team_abbrev[inputs[1]] + "');"
+				self.cursor.execute(query)
+				results = self.cursor.fetchall()
+				length = self.cursor.rowcount
+				splt = math.ceil(length/4)
+				t = PrettyTable()
+				t.field_names = ['', '  ', '   ']
+				t.align = 'l'
+				for i in range(splt + 1):
+					num_a = i + splt
+					num_b = i + (2 * splt)
+
+					first = results[i][0]
+					second = results[num_a][0] if num_a < length else ''
+					third = results[num_b][0] if num_b < length else ''
+
+					t.add_row([first, second, third])
+				print(t)
+				self.game_info()
 		else:
 			self.print_game_info()
 			self.game_info()
@@ -832,7 +835,9 @@ class MLB:
 		# run query to get the game data
 		inputs = self.nav.split(', ')
 		# make sure the inputs are valid
-		if inputs[0] in self.team_abbrev and inputs[1] in self.team_abbrev:
+		if len(inputs) != 3:
+			print('invalid Input Format')
+		elif inputs[0] in self.team_abbrev and inputs[1] in self.team_abbrev:
 			home_team = inputs[0]
 			away_team = inputs[1]
 			game_date = inputs[2]
@@ -861,6 +866,7 @@ class MLB:
 				table_title = results[2] + ' ' + results[3] + ' at ' + results[0] + ' ' + results[1] + ' on ' + results[9].strftime("%Y-%m-%d")
 				print('')
 				print(t.get_string(title=table_title))
+				self.print_game_ejection_info()
 				self.print_game_details()
 		else:
 			print('Invalid Input Format')
@@ -1869,6 +1875,27 @@ class MLB:
 		print('')
 		print(tb.get_string(title='Yearly Batting Stats'))
 
+	def print_game_ejection_info(self):
+		query = "select a.inning, e.description, e.argueBallsStrikes, e.correctEjection from Ejections e left join AtBats a using (abID) where a.gID = " + str(self.gameID) + ";"
+		self.cursor.execute(query)
+		results = self.cursor.fetchall()
+
+		t = PrettyTable()
+		t.field_names = ['Inning', 'Description', 'Argue BS', 'Correct']
+		t.align = 'l'
+		t.title = 'Game Ejections'
+
+		for x in results:
+			bs = 'Yes' if x[2] == 'FALSE' else 'No'
+			corr = ''
+			if x[3] is None:
+				corr = 'N/A'
+			else:
+				corr = 'Yes' if x[3] == 'TRUE' else 'No'
+			t.add_row([x[0], x[1], bs, corr])
+		print(t)
+
+
 	def print_player_ejection_info(self):
 		# have the playerID, so just run query on ejection on playerID
 		query = "select g.gameDate, g.homeTeam, g.awayTeam, e.team, a.inning, e.argueBallsStrikes, e.correctEjection from Ejections e left join AtBats a using (abID) left join Games g using (gID) where playerID =" + str(self.playerID) + ";"
@@ -1898,7 +1925,7 @@ class MLB:
 
 	def print_team_ejection_info(self):
 		# use self.nav to get the selected team abbreviation
-		query = " select g.homeTeam, g.awayTeam, g.gameDate, a.inning, p.firstName, p.lastName, e.argueBallsStrikes, e.correctEjection from Ejections e left join AtBats a using(abID) left join Games g using (gID) left join PlayerNames p on p.id = e.playerID  where e.team = '" + self.team_abbrev[self.nav] + "';"
+		query = "select g.homeTeam, g.awayTeam, g.gameDate, a.inning, p.firstName, p.lastName, e.argueBallsStrikes, e.correctEjection from Ejections e left join AtBats a using(abID) left join Games g using (gID) left join PlayerNames p on p.id = e.playerID  where e.team = '" + self.team_abbrev[self.nav] + "';"
 		self.cursor.execute(query)
 		results = self.cursor.fetchall()
 
