@@ -14,7 +14,7 @@ tee mlb-test-outfile.txt
 -- Show warnings after every statement
 warnings;
 
-select 'Chack if data is lost by adding constraints' as '';
+select 'Check if data is lost by adding constraints' as '';
 With GamesDataLost as
 (
     select 'Games' as 'TablesThatLostData', (count(*) - (select count(*) from Games)) as DataLost

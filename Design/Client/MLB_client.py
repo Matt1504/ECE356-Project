@@ -99,19 +99,23 @@ class MLB:
 		print('Below is all MLB Teams')
 		length = self.cursor.rowcount
 		splt = math.ceil(length/6)
-		for i in range(splt + 1):
+		for i in range(splt):
 			num_a = i + splt
 			num_b = i + (2 * splt)
 			num_c = i + (3 * splt)
 			num_d = i + (4 * splt)
+			num_e = i + (5 * splt)
+			num_f = i + (6 * splt)
 
 			first = results[i][0]
 			second = results[num_a][0] if num_a < length else ''
 			third = results[num_b][0] if num_b < length else ''
 			fourth = results[num_c][0] if num_c < length else ''
 			fifth = results[num_d][0] if num_d < length else ''
+			sixth = results[num_e][0] if num_e < length else ''
+			seventh = results[num_f][0] if num_f < length else ''
 
-			print('{:<20}{:<20}{:<20}{:<20}{:<}'.format(first,second,third, fourth, fifth))
+			print('{:<20}{:<20}{:<20}{:<20}{:<20}{:<20}{:<}'.format(first,second,third, fourth, fifth, sixth, seventh))
 
 	def print_players(self, pitchers=True):
 		if pitchers:
@@ -267,7 +271,7 @@ class MLB:
 						self.cnx.commit()
 						print("Success!")
 					except Error as e:
-						print(f"The error '{e}' occurred")
+						# print(f"The error '{e}' occurred")
 						print('Invalid Input')
 			self.insert_team_page()
 
@@ -323,7 +327,7 @@ class MLB:
 				self.cnx.commit()
 				print("Success!")
 			except Error as e:
-				print(f"The error '{e}' occurred")
+				# print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.insert_player_page()
 
@@ -366,7 +370,7 @@ class MLB:
 				self.cnx.commit()
 				print("Success!")
 			except Error as e:
-				print(f"The error '{e}' occurred")
+				# print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.insert_ejection_page()
 
@@ -419,7 +423,7 @@ class MLB:
 				self.cnx.commit()
 				print("Success!")
 			except Error as e:
-				print(f"The error '{e}' occurred")
+				# print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.insert_game_page()
 
@@ -481,7 +485,7 @@ class MLB:
 				self.cnx.commit()
 				print("Success!")
 			except Error as e:
-				print(f"The error '{e}' occurred")
+				# print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.update_team_page()
 
@@ -517,7 +521,7 @@ class MLB:
 				self.cnx.commit()
 				print("Success!")
 			except Error as e:
-				print(f"The error '{e}' occurred")
+				# print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.update_player_page()
 
@@ -550,7 +554,7 @@ class MLB:
 				self.cnx.commit()
 				print("Success!")
 			except Error as e:
-				print(f"The error '{e}' occurred")
+				# print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.update_ejection_page()
 
@@ -593,7 +597,7 @@ class MLB:
 				self.cnx.commit()
 				print("Success!")
 			except Error as e:
-				print(f"The error '{e}' occurred")
+				# print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.update_game_page()
 
@@ -624,11 +628,15 @@ class MLB:
 
 	def delete_team_page(self):
 		print('\nDelete Team')
+		print('Type \"show teams\" to display all active teams')
 		print('Input format: \"<Abbreviation>\". Must be a valid abbreviation')
 		print('Example: TOR')
 		self.nav = input('Enter the team\'s info: ')
 		if self.nav == 'back':
 			self.delete_page()
+		elif self.nav == 'show teams':
+			self.print_teams(False)
+			self.delete_team_page()
 		elif self.nav == 'home':
 			self.home_page()
 		elif self.nav == 'exit':
@@ -647,7 +655,7 @@ class MLB:
 				self.cnx.commit()
 				print("Success!")
 			except Error as e:
-				print(f"The error '{e}' occurred")
+				# print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.delete_team_page()
 
@@ -676,7 +684,7 @@ class MLB:
 				self.cnx.commit()
 				print("Success!")
 			except Error as e:
-				print(f"The error '{e}' occurred")
+				# print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.delete_player_page()
 
@@ -709,7 +717,7 @@ class MLB:
 				self.cnx.commit()
 				print("Success!")
 			except Error as e:
-				print(f"The error '{e}' occurred")
+				# print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.delete_ejection_page()
 
@@ -738,7 +746,7 @@ class MLB:
 				self.cnx.commit()
 				print("Success!")
 			except Error as e:
-				print(f"The error '{e}' occurred")
+				# print(f"The error '{e}' occurred")
 				print('Invalid Input')
 			self.delete_game_page()
 
