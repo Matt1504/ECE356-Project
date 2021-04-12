@@ -26,7 +26,7 @@ select 'Create Teams' as '';
 
 create table TeamNames (abbreviation char(3),
   city char(15) not null,
-  shortName char(15) not null,
+  shortName char(15) not null unique,
   primary key (abbreviation)
 );
 
@@ -63,7 +63,8 @@ create table Games (gID decimal(9),
   windDirection char(15),
   winningTeam char(3),
   primary key (gID),
-  check(left(gID,4) = year(gameDate))
+  check(left(gID,4) = year(gameDate)),
+  check(winningTeam = homeTeam or winningTeam = awayTeam)
 );
 
 load data infile '/var/lib/mysql-files/17-MLB/games.csv'
