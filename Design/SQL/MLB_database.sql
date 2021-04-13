@@ -14,14 +14,13 @@ tee mlb-outfile.txt
 -- Show warnings after every statement
 warnings;
 
-drop table if exists PlayerNames;
 drop table if exists Ejections;
-drop table if exists AtBats;
 drop table if exists Pitches;
-drop table if exists TeamNames;
+drop table if exists AtBats;
 drop table if exists Games;
+drop table if exists TeamNames;
+drop table if exists PlayerNames;
 
-select '------------------------------------------------' as '';
 select 'Create Teams' as '';
 
 create table TeamNames (abbreviation char(3),
@@ -31,6 +30,39 @@ create table TeamNames (abbreviation char(3),
 );
 
 -- don't actually have a csv for teams, so have to make it ourselves
+insert into TeamNames (city, shortName, abbreviation) values 
+('Los Angeles', 'Angels', 'ANA'),
+('Arizona', 'Diamondbacks', 'ARI'),
+('Atlanta', 'Braves', 'ATL'),
+('Baltimore', 'Orioles', 'BAL'),
+('Boston', 'Red Sox', 'BOS'),
+('Chicago', 'White Sox', 'CHA'),
+('Chicago', 'Cubs', 'CHN'),
+('Cincinnati', 'Reds', 'CIN'),
+('Cleveland', 'Indians', 'CLE'),
+('Colorado', 'Rockies', 'COL'),
+('Detroit', 'Tigers', 'DET'),
+('Houston', 'Astros', 'HOU'),
+('Kansas City', 'Royals', 'KCA'),
+('Los Angeles', 'Dodgers', 'LAN'),
+('Miami', 'Marlins', 'MIA'),
+('Milwaukee', 'Brewers', 'MIL'),
+('Minnesota', 'Twins', 'MIN'),
+('New York', 'Yankees', 'NYA'),
+('New York', 'Mets', 'NYN'),
+('Oakland', 'Athletics', 'OAK'),
+('Philadelphia', 'Phillies', 'PHI'),
+('Pittsburgh', 'Pirates', 'PIT'),
+('San Diego', 'Padres', 'SDN'),
+('Seattle', 'Mariners', 'SEA'),
+('San Francisco', 'Giants', 'SFN'),
+('St. Louis', 'Cardinals', 'SLN'),
+('Tampa Bay', 'Rays', 'TBA'),
+('Texas', 'Rangers', 'TEX'),
+('Toronto', 'Blue Jays', 'TOR'),
+('Washington', 'Nationals', 'WAS');
+
+select 'Create PlayersNames' as '';
 
 create table PlayerNames (id decimal(6),
   firstName char(15),
@@ -46,6 +78,8 @@ ignore into table PlayerNames
   lines terminated by '\n'
   ignore 1 lines
   (id, firstName, lastName);
+
+select 'Create Games' as '';
 
 create table Games (gID decimal(9),
   homeTeam char(3) not null,
@@ -64,7 +98,10 @@ create table Games (gID decimal(9),
   winningTeam char(3),
   primary key (gID),
   check(left(gID,4) = year(gameDate)),
-  check(winningTeam = homeTeam or winningTeam = awayTeam)
+  check(winningTeam = homeTeam or winningTeam = awayTeam),
+  foreign key (homeTeam) references TeamNames(abbreviation),
+  foreign key (awayTeam) references TeamNames(abbreviation),
+  foreign key (winningTeam) references TeamNames(abbreviation)
 );
 
 load data infile '/var/lib/mysql-files/17-MLB/games.csv'
@@ -87,47 +124,9 @@ ignore into table Games
       weatherDegrees = substring(@weatherDegrees, 2, 2),
       windSpeedMpH = if(substring(@windSpeed,3,1) = ' ', substring(@windSpeed,2,1), substring(@windSpeed,2,2)),
       windDirection = left(@windDirection, length(@windDirection) -1),
-      winningTeam = if(@homeFinalScore > @awayFinalScore, @homeTeam, @awayTeam);
+      winningTeam = if(@homeFinalScore > @awayFinalScore, upper(@homeTeam), upper(@awayTeam));
 
-insert into TeamNames select distinct homeTeam, '', '' from Games;
-
-update TeamNames set city = 'Los Angeles', shortName = 'Angels' where abbreviation = 'ANA';
-update TeamNames set city = 'Arizona', shortName = 'Diamondbacks' where abbreviation = 'ARI';
-update TeamNames set city = 'Atlanta', shortName = 'Braves' where abbreviation = 'ATL';
-update TeamNames set city = 'Baltimore', shortName = 'Orioles' where abbreviation = 'BAL';
-update TeamNames set city = 'Boston', shortName = 'Red Sox' where abbreviation = 'BOS';
-update TeamNames set city = 'Chicago', shortName = 'White Sox' where abbreviation = 'CHA';
-update TeamNames set city = 'Chicago', shortName = 'Cubs' where abbreviation = 'CHN';
-update TeamNames set city = 'Cincinnati', shortName = 'Reds' where abbreviation = 'CIN';
-update TeamNames set city = 'Cleveland', shortName = 'Indians' where abbreviation = 'CLE';
-update TeamNames set city = 'Colorado', shortName = 'Rockies' where abbreviation = 'COL';
-update TeamNames set city = 'Detroit', shortName = 'Tigers' where abbreviation = 'DET';
-update TeamNames set city = 'Houston', shortName = 'Astros' where abbreviation = 'HOU';
-update TeamNames set city = 'Kansas City', shortName = 'Royals' where abbreviation = 'KCA';
-update TeamNames set city = 'Los Angeles', shortName = 'Dodgers' where abbreviation = 'LAN';
-update TeamNames set city = 'Miami', shortName = 'Marlins' where abbreviation = 'MIA';
-update TeamNames set city = 'Milwaukee', shortName = 'Brewers' where abbreviation = 'MIL';
-update TeamNames set city = 'Minnesota', shortName = 'Twins' where abbreviation = 'MIN';
-update TeamNames set city = 'New York', shortName = 'Yankees' where abbreviation = 'NYA';
-update TeamNames set city = 'New York', shortName = 'Mets' where abbreviation = 'NYN';
-update TeamNames set city = 'Oakland', shortName = 'Athletics' where abbreviation = 'OAK';
-update TeamNames set city = 'Philadelphia', shortName = 'Phillies' where abbreviation = 'PHI';
-update TeamNames set city = 'Pittsburgh', shortName = 'Pirates' where abbreviation = 'PIT';
-update TeamNames set city = 'San Diego', shortName = 'Padres' where abbreviation = 'SDN';
-update TeamNames set city = 'Seattle', shortName = 'Mariners' where abbreviation = 'SEA';
-update TeamNames set city = 'San Francisco', shortName = 'Giants' where abbreviation = 'SFN';
-update TeamNames set city = 'St. Louis', shortName = 'Cardinals' where abbreviation = 'SLN';
-update TeamNames set city = 'Tampa Bay', shortName = 'Rays' where abbreviation = 'TBA';
-update TeamNames set city = 'Texas', shortName = 'Rangers' where abbreviation = 'TEX';
-update TeamNames set city = 'Toronto', shortName = 'Blue Jays' where abbreviation = 'TOR';
-update TeamNames set city = 'Washington', shortName = 'Nationals' where abbreviation = 'WAS';
-
--- add back the foreign keys to the Games table after we have fully populated the TeamNames table
-alter table Games
-  add foreign key (homeTeam) references TeamNames(abbreviation),
-  add foreign key (awayTeam) references TeamNames(abbreviation),
-  add foreign key (winningTeam) references TeamNames(abbreviation);
-
+select 'Create AtBats' as '';
 create table AtBats (abID decimal(10),
   gID decimal(9),
   inning int check(inning > 0),
@@ -163,6 +162,8 @@ ignore into table AtBats
       pitchDir = @pThrows,
       event = @event,
       outsAfter = @o;
+
+select 'Create Pitches' as '';
 
 create table Pitches (abID decimal(10),
   pitchNum int not null check(pitchNum > 0),
@@ -208,6 +209,8 @@ ignore into table Pitches
       on2B = if(@on2b = 0, 'FALSE', 'TRUE'),
       on3B = if(@on3b = 0, 'FALSE', 'TRUE');
 
+select 'Create Ejections' as '';
+
 create table Ejections (abID decimal(10),
   playerID decimal(6),
   team char(3),
@@ -215,7 +218,8 @@ create table Ejections (abID decimal(10),
   argueBallsStrikes char(5) check(argueBallsStrikes in ('TRUE', 'FALSE')),
   correctEjection char(5) check(correctEjection in ('TRUE', 'FALSE')),
   primary key (abID, playerID),
-  foreign key (abID) references AtBats(abID));
+  foreign key (abID) references AtBats(abID),
+  foreign key (team) references TeamNames(abbreviation)
 );
 
 -- load the data
@@ -228,26 +232,17 @@ ignore into table Ejections
   (@abID, @des, @eventNumber, @gID, @playerID, @gameDate, @bs, @correct, @team, @isHomeTeam)
   set abID = @abID,
       playerID = @playerID,
-      team = upper(@team),
+      team = upper(if(@team = 'ana', 'LAA', if(@team = 'sln', 'STL', if(@team = 'ari', 'AZN', @team)))),
       description = @des,
       argueBallsStrikes = if(@bs = 'Y', 'TRUE', 'FALSE'),
       correctEjection = if(@correct = 'C', 'TRUE', if(@correct = 'I', 'FALSE', null));
 
-update Ejections
-  set team = 'ANA' where team = 'LAA';
-update Ejections
-  set team = 'SLN' where team = 'STL';
-update Ejections
-  set team = 'ARI' where team = 'AZN';
-
 -- in this database, we only care about the players (pitchers and hitters, etc.)
 -- we don't care about managers, coaches, etc.
 -- many of the ejections are related to coaches and managers, so we can remove those from the table
-
 delete from Ejections where playerID not in (select id from PlayerNames);
 
 alter table Ejections
-  add foreign key (team) references TeamNames(abbreviation),
   add foreign key (playerID) references PlayerNames(id);
 
 -- Finish

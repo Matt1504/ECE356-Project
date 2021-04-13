@@ -87,9 +87,11 @@ class MLB:
 				r = round(r,1)
 		return r
 
-	def print_teams(self, show_all = True):
+	def print_teams(self, show_all = False, show_abbreviation = False):
 		if show_all:
 			query = "select concat(city, ' ', shortName) from TeamNames;"
+		elif show_abbreviation:
+			query = "select concat(abbreviation, ', ',city, ', ', shortName) from TeamNames;"
 		else:
 			query = "select shortName from TeamNames;"
 		# run the query
@@ -98,24 +100,14 @@ class MLB:
 		results = self.cursor.fetchall()
 		print('Below is all MLB Teams')
 		length = self.cursor.rowcount
-		splt = math.ceil(length/6)
+		splt = math.ceil(length/2)
 		for i in range(splt):
 			num_a = i + splt
-			num_b = i + (2 * splt)
-			num_c = i + (3 * splt)
-			num_d = i + (4 * splt)
-			num_e = i + (5 * splt)
-			num_f = i + (6 * splt)
 
 			first = results[i][0]
 			second = results[num_a][0] if num_a < length else ''
-			third = results[num_b][0] if num_b < length else ''
-			fourth = results[num_c][0] if num_c < length else ''
-			fifth = results[num_d][0] if num_d < length else ''
-			sixth = results[num_e][0] if num_e < length else ''
-			seventh = results[num_f][0] if num_f < length else ''
 
-			print('{:<20}{:<20}{:<20}{:<20}{:<20}{:<20}{:<}'.format(first,second,third, fourth, fifth, sixth, seventh))
+			print('{:<50}{:<}'.format(first,second))
 
 	def print_players(self, pitchers=True):
 		if pitchers:
@@ -244,7 +236,7 @@ class MLB:
 		elif self.nav == 'exit':
 			self.cleanup()
 		elif self.nav == 'show teams':
-			self.print_teams(False)
+			self.print_teams(show_abbreviation = True)
 			self.insert_team_page()
 		else:
 			# we have some input
@@ -253,11 +245,20 @@ class MLB:
 				print('Invalid Input')
 				self.insert_team_page()
 			else:
+				# abbreviation = user_input[0]
+				# city = user_input[1]
+				# name = user_input[2]
 				# check if abbreviation or short name already exists
 				if user_input[0] in self.team_abbrev or user_input[2] in self.team_names:
 					print('Abbreviation and Team Name must be unique.')
 					self.insert_team_page()
 				else:
+					# first should add the value into the dictionaries 
+					self.team_abbrev[user_input[2]] = user_input[0]
+					self.team_cities[user_input[0]] = user_input[1]
+					self.team_names[user_input[0]] = user_input[2]
+
+					# insert it into the table
 					team_name = ""
 					index = 0
 					for x in user_input:
@@ -278,7 +279,12 @@ class MLB:
 	def insert_player_page(self):
 		print('\nInsert New Player')
 		print('Type \"show players\" to display all players')
+		# help the user with the input number 
+		query = "select id from PlayerNames order by id desc limit 1;"
+		self.cursor.execute(query)
+		result = self.cursor.fetchone()
 		print('Input format: \"<ID>, <First Name>, <Last Name>\". Example: 123456, Paul, Ward')
+		print('Note that the current highest ID in our database is ' + str(result[0]) + ', so enter an ID higher than that number to ensure a successful transaction.')
 		self.nav = input('Enter the player\'s info: ')
 		if self.nav == 'back':
 			self.insert_page()
@@ -314,22 +320,25 @@ class MLB:
 			if (len(user_input) != 3):
 				print('Invalid Input')
 				self.insert_player_page()
-			player_name = ""
-			index = 0
-			for x in user_input:
-				if (index != 0):
-					player_name += ", "
-				player_name = player_name + "\"" + x + "\""
-				index += 1
-			query = "insert into PlayerNames values (" + player_name + ");"
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				# print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.insert_player_page()
+			elif int(user_input[0]) <= int(result[0]):
+				print('Invalid Player ID')
+				self.insert_player_page()
+			else:
+				player_name = ""
+				index = 0
+				for x in user_input:
+					if (index != 0):
+						player_name += ", "
+					player_name = player_name + "\"" + x + "\""
+					index += 1
+				query = "insert into PlayerNames values (" + player_name + ");"
+				try:
+					self.cursor.execute(query)
+					self.cnx.commit()
+					print("Success!")
+				except Error as e:
+					print('Invalid Input')
+				self.insert_player_page()
 
 	def insert_ejection_page(self):
 		print('\nInsert Ejection')
@@ -346,33 +355,28 @@ class MLB:
 			# we have some input
 			user_input = self.nav.split(", ")
 			if (len(user_input) != 6):
-				print('Invalid Input')
+				print('Invalid Input, too many arguments')
 				self.insert_ejection_page()
-			if (user_input[4].upper() != "TRUE" and user_input[4].upper() != "FALSE"):
-				print('Invalid Input')
+			elif (user_input[4].upper() != "TRUE" and user_input[4].upper() != "FALSE"):
+				print('Invalid Input, Argue B/S must be either TRUE or FALSE')
 				self.insert_ejection_page()
-			if (user_input[5].upper() != "TRUE" and user_input[5].upper() != "FALSE" and user_input[5].upper() != "NULL"):
-				print('Invalid Input')
+			elif (user_input[5].upper() != "TRUE" and user_input[5].upper() != "FALSE" and user_input[5].upper() != "NULL"):
+				print('Invalid Input, Correct Ejection must be TRUE FALSE or NULL')
 				self.insert_ejection_page()
-			ejection = ""
-			index = 0
-			for x in user_input:
-				if (index != 0):
-					ejection += ", "
-				if (index == 0 or index == 1):
-					ejection = ejection + x
+			else:
+				user_input[4] = user_input[4].upper()
+				if user_input[5].upper() == "NULL":
+					user_input[5] = None
 				else:
-					ejection = ejection + "\"" + x + "\""
-				index += 1
-			query = "insert into Ejections values (" + ejection + ");"
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				# print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.insert_ejection_page()
+					user_input[5] = user_input[5].upper()
+				try:
+					self.cursor.execute("insert into Ejections values (%s, %s, %s, %s, %s, %s);", (user_input[0], user_input[1], user_input[2], user_input[3], user_input[4], user_input[5]))
+					self.cnx.commit()
+					print("Success!")
+				except Error as e:
+					# print(f"The error '{e}' occurred")
+					print('Invalid Input')
+				self.insert_ejection_page()
 
 	def insert_game_page(self):
 		print('\nInsert Game')
@@ -394,38 +398,32 @@ class MLB:
 			flag1 = False
 			flag2 = False
 			flag3 = False
-			for team, abbrev in self.team_abbrev.items():
-				if (user_input[1] == abbrev):
-					flag1 = True
-				if (user_input[3] == abbrev):
-					flag2 = True
-				if (user_input[14] == abbrev):
-					flag3 = True
-			if (not(flag1 and flag2 and flag3)):
+			if user_input[1] not in self.team_abbrev.values() or user_input[3] not in self.team_abbrev.values() or user_input[14] not in self.team_abbrev.values():
 				print('Not a valid team name!')
 				self.insert_game_page()
-			if (user_input[14] != user_input[1] and user_input[14] != user_input[3]):
+			elif (user_input[14] != user_input[1] and user_input[14] != user_input[3]):
 				print('Not a valid team name!')
 				self.insert_game_page()
-			game = ""
-			index = 0
-			for x in user_input:
-				if (index != 0):
-					game += ", "
-				if (index in [0, 2, 4, 7, 9, 10, 11, 12]):
-					game = game + x
-				else:
-					game = game + "\"" + x + "\""
-				index += 1
-			query = "insert into Games values (" + game + ");"
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				# print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.insert_game_page()
+			else:
+				game = ""
+				index = 0
+				for x in user_input:
+					if (index != 0):
+						game += ", "
+					if (index in [0, 2, 4, 7, 9, 10, 11, 12]):
+						game = game + x
+					else:
+						game = game + "\"" + x + "\""
+					index += 1
+				query = "insert into Games values (" + game + ");"
+				try:
+					self.cursor.execute(query)
+					self.cnx.commit()
+					print("Success!")
+				except Error as e:
+					# print(f"The error '{e}' occurred")
+					print('Invalid Input')
+				self.insert_game_page()
 
 	def update_page(self):
 		print('\nDo you want to update:')
@@ -464,7 +462,7 @@ class MLB:
 		elif self.nav == 'exit':
 			self.cleanup()
 		elif self.nav == 'show teams':
-			self.print_teams(False)
+			self.print_teams(show_abbreviation = True)
 			self.update_team_page()
 		else:
 			# we have some input
@@ -472,22 +470,19 @@ class MLB:
 			if (len(user_input) != 3):
 				print('Invalid Input')
 				self.update_team_page()
-			flag = False
-			for team, abbrev in self.team_abbrev.items():
-				if (user_input[0] == abbrev):
-					flag = True
-			if (not flag):
+			elif user_input[0] not in self.team_abbrev.values():
 				print('Not a valid team name!')
 				self.update_team_page()
-			query = "update TeamNames set city=\"" + user_input[1] + "\", shortName=\"" + user_input[2] + "\" where abbreviation=\"" + user_input[0] + "\";"
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				# print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.update_team_page()
+			else:
+				query = "update TeamNames set city=\"" + user_input[1] + "\", shortName=\"" + user_input[2] + "\" where abbreviation=\"" + user_input[0] + "\";"
+				try:
+					self.cursor.execute(query)
+					self.cnx.commit()
+					print("Success!")
+				except Error as e:
+					# print(f"The error '{e}' occurred")
+					print('Invalid Input')
+				self.update_team_page()
 
 	def update_player_page(self):
 		print('\nUpdate Player')
@@ -506,24 +501,46 @@ class MLB:
 			# print the results
 			self.cursor.execute(query)
 			results = self.cursor.fetchall()
-			for x in results:
-				print(x[0])
-			self.insert_player_page()
+			length = self.cursor.rowcount
+			splt = math.ceil(length/5)
+			for i in range(splt + 1):
+				num_a = i + splt
+				num_b = i + (2 * splt)
+				num_c = i + (3 * splt)
+				num_d = i + (4 * splt)
+
+				first = results[i][0]
+				second = results[num_a][0] if num_a < length else ''
+				third = results[num_b][0] if num_b < length else ''
+				fourth = results[num_c][0] if num_c < length else ''
+				fifth = results[num_d][0] if num_d < length else ''
+
+				print('{:<20}{:<20}{:<20}{:<20}{:<}'.format(first,second,third, fourth, fifth))
+			self.update_player_page()
 		else:
 			# we have some input
 			user_input = self.nav.split(", ")
 			if (len(user_input) != 3):
 				print('Invalid Input')
 				self.update_player_page()
-			query = "update PlayerNames set firstName=\"" + user_input[1] + "\", lastName=\"" + user_input[2] + "\" where id=\"" + user_input[0] + "\";"
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				# print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.update_player_page()
+			else:
+				# first make sure that the player exists
+				qry = "select 1 from PlayerNames where id = " + user_input[0] + ";"
+				self.cursor.execute(qry)
+				results = self.cursor.fetchall()
+				if self.cursor.rowcount == 0:
+					print('Player ID does not exist!')
+					self.update_player_page()
+				else:
+					query = "update PlayerNames set firstName=\"" + user_input[1] + "\", lastName=\"" + user_input[2] + "\" where id=\"" + user_input[0] + "\";"
+					try:
+						self.cursor.execute(query)
+						self.cnx.commit()
+						print("Success!")
+					except Error as e:
+						# print(f"The error '{e}' occurred")
+						print('Invalid Input')
+					self.update_player_page()
 
 	def update_ejection_page(self):
 		print('\nUpdate Ejection')
@@ -542,24 +559,26 @@ class MLB:
 			if (len(user_input) != 6):
 				print('Invalid Input')
 				self.update_ejection_page()
-			if (user_input[4].upper() != "TRUE" and user_input[4].upper() != "FALSE"):
+			elif (user_input[4].upper() != "TRUE" and user_input[4].upper() != "FALSE"):
 				print('Invalid Input')
 				self.update_ejection_page()
-			if (user_input[5].upper() != "TRUE" and user_input[5].upper() != "FALSE" and user_input[5].upper() != "NULL"):
+			elif (user_input[5].upper() != "TRUE" and user_input[5].upper() != "FALSE" and user_input[5].upper() != "NULL"):
 				print('Invalid Input')
 				self.update_ejection_page()
-			query = "update Ejections set abID=" + user_input[0] + ", playerID=" + user_input[1] + ", team=\"" + user_input[2] + "\", description=\"" + user_input[3] + "\", argueBallsStrikes=\"" + user_input[4].upper() + "\", correctEjection=\"" + user_input[5].upper() + "\" where abID=\"" + user_input[0] + "\" and playerID=\"" + user_input[1] + "\";"
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				# print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.update_ejection_page()
+			else:
+				query = "update Ejections set abID=" + user_input[0] + ", playerID=" + user_input[1] + ", team=\"" + user_input[2] + "\", description=\"" + user_input[3] + "\", argueBallsStrikes=\"" + user_input[4].upper() + "\", correctEjection=\"" + user_input[5].upper() + "\" where abID=\"" + user_input[0] + "\" and playerID=\"" + user_input[1] + "\";"
+				try:
+					self.cursor.execute(query)
+					self.cnx.commit()
+					print("Success!")
+				except Error as e:
+					# print(f"The error '{e}' occurred")
+					print('Invalid Input')
+				self.update_ejection_page()
 
 	def update_game_page(self):
 		print('\nUpdate Game')
+		print('Note: If the game already exists with plays, the game date, teams played, and final scores cannot be changed')
 		print('Input format: \"<Game ID>, <Home Team>, <Home Score>, <Away Team>, <Away Score>, <Date>, <Venue>, <Attendance>, <Start Time>, <Delay>, <Elapsed Time>, <Weather Degrees>, <Wind Speed in MPH>, <Wind Direction>, <Winning Team>\". Must be valid ID and Teams')
 		print('Example: 201500000, TOR, 0, ANA, 3, 2015-01-01, Roger Centre, 0, 19:00:00, 0, 180, 45, 0, None, TOR')
 		self.nav = input('Enter the game\'s info: ')
@@ -575,31 +594,32 @@ class MLB:
 			if (len(user_input) != 15):
 				print('Invalid Input')
 				self.update_game_page()
-			flag1 = False
-			flag2 = False
-			flag3 = False
-			for team, abbrev in self.team_abbrev.items():
-				if (user_input[1] == abbrev):
-					flag1 = True
-				if (user_input[3] == abbrev):
-					flag2 = True
-				if (user_input[14] == abbrev):
-					flag3 = True
-			if (not(flag1 and flag2 and flag3)):
+			if user_input[1] not in self.team_abbrev.values() or user_input[3] not in self.team_abbrev.values() or user_input[14] not in self.team_abbrev.values():
 				print('Not a valid team name!')
 				self.update_game_page()
-			if (user_input[14] != user_input[1] and user_input[14] != user_input[3]):
+			elif (user_input[14] != user_input[1] and user_input[14] != user_input[3]):
 				print('Not a valid team name!')
 				self.update_game_page()
-			query = "update Games set homeTeam=\"" + user_input[1] + "\", homeFinalScore=" + user_input[2] + ", awayTeam=\"" + user_input[3] + "\", awayFinalScore=" + user_input[4] + ", gameDate=\"" + user_input[5] + "\", venueName=\"" + user_input[6] + "\", attendance=" + user_input[7]  + ", startTime=\"" + user_input[8] + "\", delay=" + user_input[9] + ", elapsedTime=" + user_input[10] + ", weatherDegrees=" + user_input[11] + ", elapsedTime=" + user_input[12] + ", windDirection=\"" + user_input[13] + "\", winningTeam=\"" + user_input[14] + "\" where gID =" + user_input[0] + ";"
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				# print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.update_game_page()
+			else:
+				# can only update the game if there are no atbats or pitches for this game to preserve data consistency 
+				qry = "select distinct 1 from AtBats where gID = " + user_input[0] + ";"
+				self.cursor.execute(qry)
+				self.cursor.fetchall()
+				if self.cusror.rowcount > 0:
+					# there are at bats for this game, can't delete
+					print('Warning: Game scores and teams cannot be updated it since there are plays attached to this game. Other attributes will be updated still.')
+					query = "update Games set venueName=\"" + user_input[6] + "\", attendance=" + user_input[7]  + ", startTime=\"" + user_input[8] + "\", delay=" + user_input[9] + ", elapsedTime=" + user_input[10] + ", weatherDegrees=" + user_input[11] + ", elapsedTime=" + user_input[12] + ", windDirection=\"" + user_input[13] + "\" where gID =" + user_input[0] + ";"
+				else:
+					query = "update Games set homeTeam=\"" + user_input[1] + "\", homeFinalScore=" + user_input[2] + ", awayTeam=\"" + user_input[3] + "\", awayFinalScore=" + user_input[4] + ", gameDate=\"" + user_input[5] + "\", venueName=\"" + user_input[6] + "\", attendance=" + user_input[7]  + ", startTime=\"" + user_input[8] + "\", delay=" + user_input[9] + ", elapsedTime=" + user_input[10] + ", weatherDegrees=" + user_input[11] + ", elapsedTime=" + user_input[12] + ", windDirection=\"" + user_input[13] + "\", winningTeam=\"" + user_input[14] + "\" where gID =" + user_input[0] + ";"
+				try:
+					self.cursor.execute(query)
+					self.cnx.commit()
+					print("Success!")
+				except Error as e:
+					# print(f"The error '{e}' occurred")
+					print('Invalid Input')
+				self.update_game_page()
+					
 
 	def delete_page(self):
 		print('\nDo you want to delete:')
@@ -628,14 +648,15 @@ class MLB:
 
 	def delete_team_page(self):
 		print('\nDelete Team')
-		print('Type \"show teams\" to display all active teams')
+		print('Note: If a team has played for a game, then we cannot delete the team in order to preserve consistency.')
+		print('Type \"show teams\" to display all active teams with their associated abbreviations')
 		print('Input format: \"<Abbreviation>\". Must be a valid abbreviation')
 		print('Example: TOR')
 		self.nav = input('Enter the team\'s info: ')
 		if self.nav == 'back':
 			self.delete_page()
 		elif self.nav == 'show teams':
-			self.print_teams(False)
+			self.print_teams(show_abbreviation = True)
 			self.delete_team_page()
 		elif self.nav == 'home':
 			self.home_page()
@@ -643,24 +664,43 @@ class MLB:
 			self.cleanup()
 		else:
 			# we have some input
-			query = "delete from TeamNames where abbreviation=\"" + self.nav + "\";"
+			abbrv = self.nav
 			print('Are you sure you want to delete this data?')
 			print('\t1. Yes')
 			print('\t2. No')
 			self.nav = input("Your decision: ")
 			if self.nav != '1':
 				self.delete_team_page()
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				# print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.delete_team_page()
+			else:
+				qry = "select distinct 1 from Games where homeTeam = '" + abbrv + "' or awayTeam = '" + abbrv + "';"
+				self.cursor.execute(qry)
+				self.cursor.fetchall()
+				if self.cursor.rowcount > 0:
+					# this team has  played a game, so cannot delete the team
+					print('Cannot Delete Team because there is Game Data that for the team that must be preserved!')
+					self.delete_team_page()
+				else:
+					try:
+						# first need to make sure that team is not associated to any games 
+						# if it is, we cannot delete the team 
+						query = "delete from TeamNames where abbreviation=\"" + abbrv + "\";"
+						self.cursor.execute(query)
+						self.cnx.commit()
+						print("Success!")
+
+						# remove the team from the dictionary
+						name = self.team_names[abbrv]
+						self.team_abbrev.pop(name)
+						self.team_names.pop(abbrv)
+						self.team_cities.pop(abbrv)
+					except Error as e:
+						# print(f"The error '{e}' occurred")
+						print('Invalid Input')
+					self.delete_team_page()
 
 	def delete_player_page(self):
 		print('\nDelete Player')
+		print('Note: If a player has played in a game, then we cannot delete the player in order to preserve consistency.')
 		print('Input format: \"<Player ID>\". Must be a valid ID')
 		print('Example: 000001')
 		self.nav = input('Enter the player\'s info: ')
@@ -672,21 +712,32 @@ class MLB:
 			self.cleanup()
 		else:
 			# we have some input
-			query = "delete from PlayerNames where id=" + self.nav + ";"
+			playerID = self.nav
+			query = "delete from PlayerNames where id=" + playerID + ";"
 			print('Are you sure you want to delete this data?')
 			print('\t1. Yes')
 			print('\t2. No')
 			self.nav = input("Your decision: ")
 			if self.nav != '1':
 				self.delete_player_page()
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				# print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.delete_player_page()
+			else:
+				# first check if the player has appeared in any atBats records
+				qry = "select distinct 1 from AtBats where batterID = " + playerID + " or pitcherID = " + playerID + ";"
+				self.cursor.execute(qry)
+				self.cursor.fetchall()
+				if self.cursor.rowcount > 0:
+					# the player has participated, can't delete
+					print('Player cannot be deleted')
+					self.delete_player_page()
+				else:
+					try:
+						self.cursor.execute(query)
+						self.cnx.commit()
+						print("Success!")
+					except Error as e:
+						# print(f"The error '{e}' occurred")
+						print('Invalid Input')
+					self.delete_player_page()
 
 	def delete_ejection_page(self):
 		print('\nDelete Ejection')
@@ -705,24 +756,27 @@ class MLB:
 			if (len(user_input) != 2):
 				print('Invalid Input')
 				self.delete_ejection_page()
-			query = "delete from Ejections where abID=" + user_input[0] + " and playerID=" + user_input[1] + ";"
-			print('Are you sure you want to delete this data?')
-			print('\t1. Yes')
-			print('\t2. No')
-			self.nav = input("Your decision: ")
-			if self.nav != '1':
-				self.delete_ejection_page()
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				# print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.delete_ejection_page()
+			else:
+				query = "delete from Ejections where abID=" + user_input[0] + " and playerID=" + user_input[1] + ";"
+				print('Are you sure you want to delete this data?')
+				print('\t1. Yes')
+				print('\t2. No')
+				self.nav = input("Your decision: ")
+				if self.nav != '1':
+					self.delete_ejection_page()
+				else:
+					try:
+						self.cursor.execute(query)
+						self.cnx.commit()
+						print("Success!")
+					except Error as e:
+						# print(f"The error '{e}' occurred")
+						print('Invalid Input')
+					self.delete_ejection_page()
 
 	def delete_game_page(self):
 		print('\nDelete Game')
+		print('Warning: Deleting the game will delete all the associated plays in that game (Pitches, Ejections, and At Bats).')
 		print('Input format: \"<Game ID>\". Must be a valid ID')
 		print('Example: 201500001')
 		self.nav = input('Enter the game\'s info: ')
@@ -734,21 +788,34 @@ class MLB:
 			self.cleanup()
 		else:
 			# we have some input
-			query = "delete from Games where gID=" + self.nav + ";"
+			game_id = self.nav
 			print('Are you sure you want to delete this data?')
 			print('\t1. Yes')
 			print('\t2. No')
 			self.nav = input("Your decision: ")
 			if self.nav != '1':
 				self.delete_game_page()
-			try:
-				self.cursor.execute(query)
-				self.cnx.commit()
-				print("Success!")
-			except Error as e:
-				# print(f"The error '{e}' occurred")
-				print('Invalid Input')
-			self.delete_game_page()
+			else:
+				print('Deleting Game Data, please wait...')
+				try:
+					query1 = "delete from Pitches where abID in (select distinct abID from AtBats where gID = " + game_id + ");"
+					self.cursor.execute(query1)
+					self.cnx.commit()			
+					query2 = "delete from Ejections where abID in (select distinct abID from AtBats where gID = " + game_id + ");"
+					self.cursor.execute(query2)
+					self.cnx.commit()				
+					query3 = "delete from AtBats where gID = " + str(game_id) + ";"
+					self.cursor.execute(query3)
+					self.cnx.commit()
+					query4 = "delete from Games where gID = " + str(game_id) + ";"
+					self.cursor.execute(query4)
+					self.cnx.commit()				
+					query = "select from Pitches "
+					print("Success!")
+				except Error as e:
+					# print(f"The error '{e}' occurred")
+					print('Invalid Input')
+				self.delete_game_page()
 
 	def player_page(self):
 		print('\nPlayer Data')
@@ -784,37 +851,44 @@ class MLB:
 		elif self.nav == 'year team':
 			# run query to get all team names
 			# print teams
-			self.print_teams(False)
-			self.nav = input('Enter the number of the games you want to see from the desired team for a given year (Ex: 2015, Blue Jays): ')
+			self.print_teams()
+			self.nav = input('Enter the desired team for a given year (Ex: 2015, Blue Jays): ')
 			# run query to get all games from that team
 			# split the result 
-			inputs = self.nav.split(', ')
-			if len(inputs) != 2:
-				print('Not a valid team name!')
-				self.game_info()
-			elif inputs[1] not in self.team_abbrev or inputs[0] not in self.years:
-				print('Not a valid team name!')
-				self.game_info()
+			if self.nav == 'back':
+				self.view_page()
+			elif self.nav == 'home':
+				self.home_page()
+			elif self.nav == 'exit':
+				self.cleanup()
 			else:
-				query = "select concat(a.shortName,', ', b.shortName, ', ', c.gameDate) from Games c left join TeamNames a on c.homeTeam = a.abbreviation left join TeamNames b on c.awayTeam = b.abbreviation where year(gameDate) = " + inputs[0] + " and (homeTeam = '" + self.team_abbrev[inputs[1]] + "' or awayTeam = '" + self.team_abbrev[inputs[1]] + "');"
-				self.cursor.execute(query)
-				results = self.cursor.fetchall()
-				length = self.cursor.rowcount
-				splt = math.ceil(length/4)
-				t = PrettyTable()
-				t.field_names = ['', '  ', '   ']
-				t.align = 'l'
-				for i in range(splt + 1):
-					num_a = i + splt
-					num_b = i + (2 * splt)
+				inputs = self.nav.split(', ')
+				if len(inputs) != 2:
+					print('Not a valid team name!')
+					self.game_info()
+				elif inputs[1] not in self.team_abbrev or inputs[0] not in self.years:
+					print('Not a valid team name!')
+					self.game_info()
+				else:
+					query = "select concat(a.shortName,', ', b.shortName, ', ', c.gameDate) from Games c left join TeamNames a on c.homeTeam = a.abbreviation left join TeamNames b on c.awayTeam = b.abbreviation where year(gameDate) = " + inputs[0] + " and (homeTeam = '" + self.team_abbrev[inputs[1]] + "' or awayTeam = '" + self.team_abbrev[inputs[1]] + "');"
+					self.cursor.execute(query)
+					results = self.cursor.fetchall()
+					length = self.cursor.rowcount
+					splt = math.ceil(length/4)
+					t = PrettyTable()
+					t.field_names = ['', '  ', '   ']
+					t.align = 'l'
+					for i in range(splt + 1):
+						num_a = i + splt
+						num_b = i + (2 * splt)
 
-					first = results[i][0]
-					second = results[num_a][0] if num_a < length else ''
-					third = results[num_b][0] if num_b < length else ''
+						first = results[i][0]
+						second = results[num_a][0] if num_a < length else ''
+						third = results[num_b][0] if num_b < length else ''
 
-					t.add_row([first, second, third])
-				print(t)
-				self.game_info()
+						t.add_row([first, second, third])
+					print(t)
+					self.game_info()
 		else:
 			self.print_game_info()
 			self.game_info()
@@ -831,7 +905,7 @@ class MLB:
 		elif self.nav == 'exit':
 			self.cleanup()
 		elif self.nav == 'show teams':
-			self.print_teams(False)
+			self.print_teams()
 			self.team_info()
 		else:
 			# get the info for that team
@@ -863,7 +937,7 @@ class MLB:
 				t = PrettyTable()
 				t.field_names=['Label', 'Value']
 				t.align='l'
-				t.add_row(['Final Score', '(' + str(results[8]) + ') ' + results[1] + ' vs. (' + str(results[6]) + ') ' + results[3]])
+				t.add_row(['Final Score', '(' + str(results[6]) + ') ' + results[1] + ' vs. (' + str(results[8]) + ') ' + results[3]])
 				t.add_row(['Venue', results[10]])
 				t.add_row(['Attendance', results[11]])
 				t.add_row(['Start Time', results[12]])

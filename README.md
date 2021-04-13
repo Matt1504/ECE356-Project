@@ -14,6 +14,32 @@ https://www.kaggle.com/pschale/mlb-pitch-data-20152018
 
 Pitch-level data for every pitch thrown during the 2015-2018 MLB regular seasons. Each row represents a single pitch.
 
+### Project Information
+#### SQL Data
+In this project we use create SQL queries and communicate to the database using MySQL and our tables and data is stored in the project_36 database of marmoset
+### Client 
+The client is written in Python, and to run the application, first make sure that you set your directory to the client folder 
+
+```bash
+cd Design/Client
+```
+Here you will see MLB_client.py. Before you can run the application, you should make sure you have the necessary libraries installed, specifically the mysql.connector 
+
+```bash
+pip install mysql-connector-python
+```
+```bash
+pip install mysql-connector-python --user
+```
+You may have to add --user if you do not have write permissions on the ece ubuntu machines. 
+The other libraries used are already part of Python already so you don't need to install those libraries. All you have to do after is run the python file and you will be prompted to login to the SQL connection and you are free to follow the instructions on the application 
+
+```bash
+python3 MLB_client.py
+```
+### Useful Information
+Below is a legend for some of the codes and definitions in the SQL database. You can use this to understand the meaning behind some of the data, specifically in the AtBats and Pitches tables. 
+
 #### Pitch Type Definitions
 CH - Changeup
 
