@@ -605,7 +605,7 @@ class MLB:
 				qry = "select distinct 1 from AtBats where gID = " + user_input[0] + ";"
 				self.cursor.execute(qry)
 				self.cursor.fetchall()
-				if self.cusror.rowcount > 0:
+				if self.cursor.rowcount > 0:
 					# there are at bats for this game, can't delete
 					print('Warning: Game scores and teams cannot be updated it since there are plays attached to this game. Other attributes will be updated still.')
 					query = "update Games set venueName=\"" + user_input[6] + "\", attendance=" + user_input[7]  + ", startTime=\"" + user_input[8] + "\", delay=" + user_input[9] + ", elapsedTime=" + user_input[10] + ", weatherDegrees=" + user_input[11] + ", elapsedTime=" + user_input[12] + ", windDirection=\"" + user_input[13] + "\" where gID =" + user_input[0] + ";"
